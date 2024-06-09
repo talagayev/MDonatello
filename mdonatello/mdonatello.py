@@ -1,16 +1,16 @@
 import MDAnalysis as mda
 from ipywidgets import interact, Layout, VBox, HTML, Dropdown, Button, Checkbox
-from rdkit import Chem
-from rdkit.Chem import Draw
+from rdkit import Chem, RDConfig
+from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures
 from rdkit.Chem.Draw import rdMolDraw2D
-from rdkit.Chem import AllChem, Descriptors
 from IPython.display import display, clear_output
 from io import BytesIO
 import base64
+import os
 
 
 class MoleculeVisualizer:
-    def __init__(self, ag, show_atom_indices=False, highlight_aromatic=False):
+    def __init__(self, ag, show_atom_indices=False):
         self.ag = ag.convert_to("RDKit")
         self.ag_noh = Chem.RemoveHs(self.ag)
         AllChem.Compute2DCoords(self.ag_noh)
@@ -23,10 +23,21 @@ class MoleculeVisualizer:
             layout=Layout(width="50%")
         )
         self.show_atom_indices_checkbox = Checkbox(value=show_atom_indices, description="Show atom indices")
-        self.highlight_aromatic_checkbox = Checkbox(value=highlight_aromatic, description="Highlight aromatic atoms")
         self.physiochem_props_checkbox = Checkbox(value=False, description="Show Physiochemical Properties")
         self.hbond_props_checkbox = Checkbox(value=False, description=self.get_hbond_description())
         self.save_button = Button(description="Save as PNG")
+
+        # Pharmacophore feature detection
+        self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
+        self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
+        self.feats = self.factory.GetFeaturesForMol(self.ag_noh)
+
+        # Dynamically create checkboxes for each unique pharmacophore type
+        self.pharmacophore_checkboxes = {}
+        for feat in self.feats:
+            family = feat.GetFamily()
+            if family not in self.pharmacophore_checkboxes:
+                self.pharmacophore_checkboxes[family] = Checkbox(value=False, description=f"Highlight {family}")
         
         # Save button click event
         self.save_button.on_click(self.save_selected_molecule)
@@ -34,7 +45,7 @@ class MoleculeVisualizer:
         # Display widgets
         self.output_dropdown = VBox()
         self.output_dropdown.children = [
-            self.dropdown, self.show_atom_indices_checkbox, self.highlight_aromatic_checkbox,
+            self.dropdown, self.show_atom_indices_checkbox,
             self.physiochem_props_checkbox, self.hbond_props_checkbox
         ]
         self.output_molecule = VBox()
@@ -49,48 +60,55 @@ class MoleculeVisualizer:
         # Link widgets to display update
         self.dropdown.observe(self.update_display, names="value")
         self.show_atom_indices_checkbox.observe(self.update_display, names="value")
-        self.highlight_aromatic_checkbox.observe(self.update_display, names="value")
         self.physiochem_props_checkbox.observe(self.update_display, names="value")
         self.hbond_props_checkbox.observe(self.update_display, names="value")
+        for checkbox in self.pharmacophore_checkboxes.values():
+            checkbox.observe(self.update_display, names="value")
 
-    def get_hbond_description(self):
-        num_h_donors = Descriptors.NumHDonors(self.ag_noh)
-        num_h_acceptors = Descriptors.NumHAcceptors(self.ag_noh)
-        return f"Show H-Bond Donors/Acceptors"
+    def display_molecule(self, ag, show_atom_indices):
+        highlights = {"atoms": [], "bonds": []}
+        highlight_colors = {}
 
-    def display_molecule(self, ag, show_atom_indices, highlight_aromatic):
-        if highlight_aromatic:
-            hit_ats = [atom.GetIdx() for atom in ag.GetAtoms() if atom.GetIsAromatic()]
-            hit_bonds = [
-                bond.GetIdx() for bond in ag.GetBonds() 
-                if bond.GetBeginAtom().GetIsAromatic() and bond.GetEndAtom().GetIsAromatic()
-            ]
-            d = rdMolDraw2D.MolDraw2DSVG(300, 300)
-            d.drawOptions().addStereoAnnotation = True
-            rdMolDraw2D.PrepareAndDrawMolecule(
-                d, ag, highlightAtoms=hit_ats, highlightBonds=hit_bonds,
-                highlightAtomColors={idx: (0.5, 0, 0.5) for idx in hit_ats},
-                highlightBondColors={idx: (0.5, 0, 0.5) for idx in hit_bonds}
-            )
-            d.FinishDrawing()
-            svg = d.GetDrawingText()
-            return HTML(svg)
-        
+        # Pharmacophore highlighting
+        for feat in self.feats:
+            family = feat.GetFamily()
+            if self.pharmacophore_checkboxes[family].value:
+                atom_ids = feat.GetAtomIds()
+                highlights["atoms"].extend(atom_ids)
+                color = self.get_color_for_pharmacophore(family)
+                for atom_id in atom_ids:
+                    highlight_colors[atom_id] = color
+
         if show_atom_indices:
             for atom in ag.GetAtoms():
                 atom.SetProp("atomNote", str(atom.GetIdx()))
         else:
             for atom in ag.GetAtoms():
                 atom.ClearProp("atomNote")
+
+        d = rdMolDraw2D.MolDraw2DSVG(300, 300)
+        d.drawOptions().addStereoAnnotation = True
+        rdMolDraw2D.PrepareAndDrawMolecule(
+            d, ag, highlightAtoms=highlights["atoms"], highlightBonds=highlights["bonds"],
+            highlightAtomColors=highlight_colors, highlightBondColors=highlight_colors
+        )
+        d.FinishDrawing()
+        svg = d.GetDrawingText()
+        return HTML(svg)
         
-        bio = BytesIO()
-        img = Draw.MolToImage(ag)
-        img.save(bio, format="png")
-        html = f'<img src="data:image/png;base64,{base64.b64encode(bio.getvalue()).decode()}" />'
-        return HTML(html)
-        
+    def get_color_for_pharmacophore(self, family):
+        color_map = {
+            "Donor": (0.0, 1.0, 0.0),      # Green
+            "Acceptor": (1.0, 0.7, 0.7),   # Rosa
+            "Hydrophobe": (1.0, 1.0, 0.0),  # Yellow
+            "PosIonizable": (0.0, 1.0, 1.0),  # Turquoise
+            "NegIonizable": (1.0, 0.0, 1.0),  # Pink
+            "Aromatic": (0.5, 0.5, 1.0),  # Light Blue
+            "LumpedHydrophobe": (1.0, 0.5, 0.0)  # Orange
+        }
+        return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
+    
     def update_display(self, _=None):
-        self.hbond_props_checkbox.description = self.get_hbond_description()
         smiles = Chem.MolToSmiles(self.ag_noh)
         
         children = [
@@ -143,4 +161,3 @@ class MoleculeVisualizer:
         img = Draw.MolToImage(self.ag_noh)
         img.save(filename)
         print(f"Molecule saved as '{filename}'")
-
