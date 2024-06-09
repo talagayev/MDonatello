@@ -5,5 +5,6 @@ MDonatello
 
 # Add imports here
 from importlib.metadata import version
+from .mdonatello import MoleculeVisualizer
 
 __version__ = version("mdonatello")
