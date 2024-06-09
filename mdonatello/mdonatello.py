@@ -112,7 +112,7 @@ class MoleculeVisualizer:
         smiles = Chem.MolToSmiles(self.ag_noh)
         
         children = [
-            self.display_molecule(self.ag_noh, self.show_atom_indices_checkbox.value, self.highlight_aromatic_checkbox.value),
+            self.display_molecule(self.ag_noh, self.show_atom_indices_checkbox.value),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>")
         ]
         
