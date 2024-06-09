@@ -47,7 +47,7 @@ class MoleculeVisualizer:
         self.output_dropdown.children = [
             self.dropdown, self.show_atom_indices_checkbox,
             self.physiochem_props_checkbox, self.hbond_props_checkbox
-        ]
+        ] + list(self.pharmacophore_checkboxes.values())
         self.output_molecule = VBox()
         self.output = VBox()
         self.output.children = [self.output_molecule, self.save_button]
