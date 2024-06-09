@@ -24,7 +24,7 @@ class MoleculeVisualizer:
         )
         self.show_atom_indices_checkbox = Checkbox(value=show_atom_indices, description="Show atom indices")
         self.physiochem_props_checkbox = Checkbox(value=False, description="Show Physiochemical Properties")
-        self.hbond_props_checkbox = Checkbox(value=False, description=self.get_hbond_description())
+        self.hbond_props_checkbox = Checkbox(value=False, description="Show H-Bond Donors/Acceptors")
         self.save_button = Button(description="Save as PNG")
 
         # Pharmacophore feature detection
