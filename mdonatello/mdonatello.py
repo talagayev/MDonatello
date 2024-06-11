@@ -10,6 +10,42 @@ import os
 
 
 class MoleculeVisualizer:
+   """A class for small molecule 2D visualization in jupyter notebook
+
+    Parameters:
+    -----------
+    ag : MDAnalysis.core.groups.AtomGroup
+        An AtomGroup object representing the molecules that need to be visualized.
+    show_atom_indices : bool, optional
+        Whether to display atom indices of the molecule. Default is False.
+    width : int, optional
+        The width of the image in pixels. Default is 300.
+    height : int, optional
+        The height of the image in pixels. Default is 300.
+
+    Methods:
+    --------
+    display_molecule(mol, show_atom_indices, width, height):
+        Display the molecule with specified options.
+    get_color_for_pharmacophore(family):
+        Get the color codes for highlighting a specific pharmacophore feature.
+    update_display():
+        Update the molecule display based on widget values.
+    display_molecular_weight(mol):
+        Display the molecular weight of the selected molecule.
+    display_logp(mol):
+        Display the LogP value of the selected molecule.
+    display_num_h_donors(mol):
+        Display the number of Hydrogen bond donors of the molecule.
+    display_num_h_acceptors(mol):
+        Display the number of Hydrogen bond acceptors of the molecule.
+    display_tpsa(mol):
+        Display the topological polar surface area (TPSA) of the molecule.
+    display_rotatable_bonds(mol):
+        Display the number of rotatable bonds present in the molecule.
+    save_selected_molecule(_):
+        Save the currently displayed molecule as an image.
+    """
     def __init__(self, ag, show_atom_indices=False, width, height):
         self.mol = ag.convert_to("RDKit")
         self.mol_noh = Chem.RemoveHs(self.mol)
