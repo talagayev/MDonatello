@@ -79,14 +79,8 @@ class MoleculeVisualizer:
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
-        if show_atom_indices:
-            for atom in mol.GetAtoms():
-                atom.SetProp("atomNote", str(atom.GetIdx()))
-        else:
-            for atom in mol.GetAtoms():
-                atom.ClearProp("atomNote")
-
         d = rdMolDraw2D.MolDraw2DSVG(300, 300)
+        d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
         rdMolDraw2D.PrepareAndDrawMolecule(
             d, mol, highlightAtoms=highlights["atoms"], highlightBonds=highlights["bonds"],
