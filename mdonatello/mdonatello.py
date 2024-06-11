@@ -10,11 +10,15 @@ import os
 
 
 class MoleculeVisualizer:
-    def __init__(self, ag, show_atom_indices=False):
+    def __init__(self, ag, show_atom_indices=False, width, height):
         self.mol = ag.convert_to("RDKit")
         self.mol_noh = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
         self.molecule_list = ["Molecule"]
+
+        # Add height and width
+        self.width = width
+        self.height = height
         
         # Create the dropdown and other widgets
         self.dropdown = Dropdown(
@@ -65,7 +69,7 @@ class MoleculeVisualizer:
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
 
-    def display_molecule(self, mol, show_atom_indices):
+    def display_molecule(self, mol, show_atom_indices, width, height):
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -79,7 +83,7 @@ class MoleculeVisualizer:
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
-        d = rdMolDraw2D.MolDraw2DSVG(300, 300)
+        d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
         rdMolDraw2D.PrepareAndDrawMolecule(
