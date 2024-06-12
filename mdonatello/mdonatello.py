@@ -10,7 +10,7 @@ import os
 
 
 class MoleculeVisualizer:
-   """A class for small molecule 2D visualization in jupyter notebook
+    """A class for small molecule 2D visualization in jupyter notebook
 
     Parameters:
     -----------
@@ -44,9 +44,9 @@ class MoleculeVisualizer:
     display_rotatable_bonds(mol):
         Display the number of rotatable bonds present in the molecule.
     save_selected_molecule(_):
-        Save the currently displayed molecule as an image.
-    """
-    def __init__(self, ag, show_atom_indices=False, width, height):
+        Save the currently displayed molecule as an image. """
+   
+    def __init__(self, ag, show_atom_indices=False, width=300, height=300):
         self.mol = ag.convert_to("RDKit")
         self.mol_noh = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
