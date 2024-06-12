@@ -166,28 +166,28 @@ class MoleculeVisualizer:
         
         self.output_molecule.children = children
         
-    def display_molecular_weight(self, mol):
-        mw = Descriptors.MolWt(mol)
+    def display_molecular_weight(self):
+        mw = Descriptors.MolWt(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {:.2f} g/mol</p>".format(mw))
         
-    def display_logp(self, mol):
-        logp = Descriptors.MolLogP(mol)
+    def display_logp(self):
+        logp = Descriptors.MolLogP(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>LogP: {:.2f}</p>".format(logp))
 
-    def display_num_h_donors(self, mol):
-        num_h_donors = Descriptors.NumHDonors(mol)
+    def display_num_h_donors(self):
+        num_h_donors = Descriptors.NumHDonors(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {:.0f}</p>".format(num_h_donors))
 
-    def display_num_h_acceptors(self, mol):
-        num_h_acceptors = Descriptors.NumHAcceptors(mol)
+    def display_num_h_acceptors(self):
+        num_h_acceptors = Descriptors.NumHAcceptors(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {:.0f}</p>".format(num_h_acceptors))
     
-    def display_tpsa(self, mol):
-        tpsa = Descriptors.TPSA(mol)
+    def display_tpsa(self):
+        tpsa = Descriptors.TPSA(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {:.2f} Å²</p>".format(tpsa))
         
-    def display_rotatable_bonds(self, mol):
-        rotatable_bonds = Descriptors.NumRotatableBonds(mol)
+    def display_rotatable_bonds(self):
+        rotatable_bonds = Descriptors.NumRotatableBonds(self.mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {:.0f}</p>".format(rotatable_bonds))
         
     def save_selected_molecule(self, _):
