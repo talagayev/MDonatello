@@ -183,7 +183,7 @@ class MoleculeVisualizer:
 
     def display_num_h_donors(self):
         num_h_donors = Descriptors.NumHDonors(self.mol)
-        return HTMLf"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>")
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>")
 
     def display_num_h_acceptors(self):
         num_h_acceptors = Descriptors.NumHAcceptors(self.mol)
