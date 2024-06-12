@@ -152,16 +152,16 @@ class MoleculeVisualizer:
         
         if self.physiochem_props_checkbox.value:
             children.extend([
-                self.display_molecular_weight(self.mol_noh),
-                self.display_logp(self.mol_noh),
-                self.display_tpsa(self.mol_noh),
-                self.display_rotatable_bonds(self.mol_noh)
+                self.display_molecular_weight(),
+                self.display_logp(),
+                self.display_tpsa(),
+                self.display_rotatable_bonds()
             ])
             
         if self.hbond_props_checkbox.value:
             children.extend([
-                self.display_num_h_donors(self.mol_noh),
-                self.display_num_h_acceptors(self.mol_noh)
+                self.display_num_h_donors(),
+                self.display_num_h_acceptors()
             ])
         
         self.output_molecule.children = children
