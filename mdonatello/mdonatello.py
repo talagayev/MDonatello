@@ -168,27 +168,27 @@ class MoleculeVisualizer:
         
     def display_molecular_weight(self):
         mw = Descriptors.MolWt(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {:.2f} g/mol</p>".format(mw))
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {mw:.2f} g/mol</p>")
         
     def display_logp(self):
         logp = Descriptors.MolLogP(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>LogP: {:.2f}</p>".format(logp))
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>LogP: {logp:.2f}</p>")
 
     def display_num_h_donors(self):
         num_h_donors = Descriptors.NumHDonors(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {:.0f}</p>".format(num_h_donors))
+        return HTMLf"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>")
 
     def display_num_h_acceptors(self):
         num_h_acceptors = Descriptors.NumHAcceptors(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {:.0f}</p>".format(num_h_acceptors))
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {num_h_acceptors}</p>")
     
     def display_tpsa(self):
         tpsa = Descriptors.TPSA(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {:.2f} Å²</p>".format(tpsa))
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {tpsa:.2f} Å²</p>")
         
     def display_rotatable_bonds(self):
         rotatable_bonds = Descriptors.NumRotatableBonds(self.mol)
-        return HTML("<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {:.0f}</p>".format(rotatable_bonds))
+        return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {rotatable_bonds}</p>")
         
     def save_selected_molecule(self, _):
         filename = "molecule.png"
