@@ -1,5 +1,5 @@
 import MDAnalysis as mda
-from ipywidgets import interact, Layout, VBox, HTML, Dropdown, Button, Checkbox
+from ipywidgets import interact, Layout, VBox, HTML, Dropdown, Button, Checkbox, HBox
 from rdkit import Chem, RDConfig
 from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures
 from rdkit.Chem.Draw import rdMolDraw2D
