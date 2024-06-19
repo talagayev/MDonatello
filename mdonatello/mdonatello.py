@@ -46,11 +46,15 @@ class MoleculeVisualizer:
     save_selected_molecule(_):
         Save the currently displayed molecule as an image. """
    
-    def __init__(self, ag, show_atom_indices=False, width=300, height=300):
+    def __init__(self, ag, show_atom_indices=False, width=-1, height=-1):
         self.mol = ag.convert_to("RDKit")
         self.mol_noh = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
-        self.molecule_list = ["Molecule"]
+
+        # Get individual fragments
+        fragments = Chem.GetMolFrags(self.mol_noh, asMols=True)
+        self.molecule_list = [Chem.MolToSmiles(frag) for frag in fragments]
+        self.fragments = {smiles: frag for smiles, frag in zip(self.molecule_list, fragments)}
 
         # Add height and width
         self.width = width
@@ -70,7 +74,7 @@ class MoleculeVisualizer:
         # Pharmacophore feature detection
         self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
         self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
-        self.feats = self.factory.GetFeaturesForMol(self.mol_noh)
+        self.update_pharmacophore_features(self.fragments[self.molecule_list[0]])
 
         # Dynamically create checkboxes for each unique pharmacophore type
         self.pharmacophore_checkboxes = {}
@@ -83,11 +87,23 @@ class MoleculeVisualizer:
         self.save_button.on_click(self.save_selected_molecule)
         
         # Display widgets
+        pharmacophore_checkbox_rows = []
+        checkboxes = list(self.pharmacophore_checkboxes.values())
+        for i in range(0, len(checkboxes), 4):
+            row = checkboxes[i:i+4]
+            pharmacophore_checkbox_rows.append(HBox(row))
+        
+        properties_header = HTML("<h3>Properties</h3>")
+        pharmacophores_header = HTML("<h3>Pharmacophores</h3>")
+        
         self.output_dropdown = VBox()
         self.output_dropdown.children = [
-            self.dropdown, self.show_atom_indices_checkbox,
-            self.physiochem_props_checkbox, self.hbond_props_checkbox
-        ] + list(self.pharmacophore_checkboxes.values())
+            HBox([self.dropdown, self.show_atom_indices_checkbox]),
+            properties_header,
+            HBox([self.physiochem_props_checkbox, self.hbond_props_checkbox]),
+            pharmacophores_header
+        ] + pharmacophore_checkbox_rows
+        
         self.output_molecule = VBox()
         self.output = VBox()
         self.output.children = [self.output_molecule, self.save_button]
@@ -105,12 +121,8 @@ class MoleculeVisualizer:
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
 
-    def display_molecule(self,):
-        return self.draw_molecule(
-            self.mol_noh,
-            show_atom_indices=self.show_atom_indices_checkbox.value,
-            highlight_aromatic=self.highlight_aromatic_checkbox.value,
-        )
+    def update_pharmacophore_features(self, mol):
+        self.feats = self.factory.GetFeaturesForMol(mol)
     
     def draw_molecule(self, mol, show_atom_indices, width, height):
         highlights = {"atoms": [], "bonds": []}
@@ -150,55 +162,61 @@ class MoleculeVisualizer:
         return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
     
     def update_display(self, _=None):
-        smiles = Chem.MolToSmiles(self.mol_noh)
+        smiles = self.dropdown.value
+        mol = self.fragments[smiles]
+
+        # Update pharmacophore features for the selected molecule
+        self.update_pharmacophore_features(mol)
         
         children = [
-            self.draw_molecule(self.mol_noh, self.show_atom_indices_checkbox.value, self.width, self.height),
+            self.draw_molecule(mol, self.show_atom_indices_checkbox.value, self.width, self.height),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>")
         ]
         
         if self.physiochem_props_checkbox.value:
             children.extend([
-                self.display_molecular_weight(),
-                self.display_logp(),
-                self.display_tpsa(),
-                self.display_rotatable_bonds()
+                self.display_molecular_weight(mol),
+                self.display_logp(mol),
+                self.display_tpsa(mol),
+                self.display_rotatable_bonds(mol)
             ])
             
         if self.hbond_props_checkbox.value:
             children.extend([
-                self.display_num_h_donors(),
-                self.display_num_h_acceptors()
+                self.display_num_h_donors(mol),
+                self.display_num_h_acceptors(mol)
             ])
         
         self.output_molecule.children = children
         
-    def display_molecular_weight(self):
-        mw = Descriptors.MolWt(self.mol)
+    def display_molecular_weight(self, mol):
+        mw = Descriptors.MolWt(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {mw:.2f} g/mol</p>")
         
-    def display_logp(self):
-        logp = Descriptors.MolLogP(self.mol)
+    def display_logp(self, mol):
+        logp = Descriptors.MolLogP(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>LogP: {logp:.2f}</p>")
 
-    def display_num_h_donors(self):
-        num_h_donors = Descriptors.NumHDonors(self.mol)
+    def display_num_h_donors(self, mol):
+        num_h_donors = Descriptors.NumHDonors(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>")
 
-    def display_num_h_acceptors(self):
-        num_h_acceptors = Descriptors.NumHAcceptors(self.mol)
+    def display_num_h_acceptors(self, mol):
+        num_h_acceptors = Descriptors.NumHAcceptors(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {num_h_acceptors}</p>")
     
-    def display_tpsa(self):
-        tpsa = Descriptors.TPSA(self.mol)
+    def display_tpsa(self, mol):
+        tpsa = Descriptors.TPSA(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {tpsa:.2f} Å²</p>")
         
-    def display_rotatable_bonds(self):
-        rotatable_bonds = Descriptors.NumRotatableBonds(self.mol)
+    def display_rotatable_bonds(self, mol):
+        rotatable_bonds = Descriptors.NumRotatableBonds(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {rotatable_bonds}</p>")
         
     def save_selected_molecule(self, _):
-        filename = "molecule.png"
-        img = Draw.MolToImage(self.mol_noh)
+        smiles = self.dropdown.value
+        mol = self.fragments[smiles]
+        filename = f"{smiles}.png"
+        img = Draw.MolToImage(mol)
         img.save(filename)
         print(f"Molecule saved as '{filename}'")
