@@ -55,12 +55,11 @@ class MoleculeVisualizer:
         self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
         self.pharmacophore_checkboxes = {}
 
-        # Dynamically create checkboxes for each unique pharmacophore type
-        self.pharmacophore_checkboxes = {}
-        for feat in self.feats:
-            family = feat.GetFamily()
-            if family not in self.pharmacophore_checkboxes:
-                self.pharmacophore_checkboxes[family] = Checkbox(value=False, description=f"Highlight {family}")
+        # Define all possible pharmacophore features
+        pharmacophore_families = ["Donor", "Acceptor", "Hydrophobe", "PosIonizable", "NegIonizable", "Aromatic", "LumpedHydrophobe"]
+
+        for family in pharmacophore_families:
+            self.pharmacophore_checkboxes[family] = Checkbox(value=False, description=f"Highlight {family}")
         
         # Save button click event
         self.save_button.on_click(self.save_selected_molecule)
