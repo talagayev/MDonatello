@@ -103,6 +103,9 @@ class MoleculeVisualizer:
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
+        # Update pharmacophore features for the selected molecule
+        feats = self.factory.GetFeaturesForMol(mol)
+        
         # Pharmacophore highlighting
         for feat in feats:
             family = feat.GetFamily()
