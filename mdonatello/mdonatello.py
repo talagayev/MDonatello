@@ -53,14 +53,13 @@ class MoleculeVisualizer:
         # Pharmacophore feature detection
         self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
         self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
-        self.update_pharmacophore_features(self.fragments[self.molecule_list[0]])
-
-        # Dynamically create checkboxes for each unique pharmacophore type
         self.pharmacophore_checkboxes = {}
-        for feat in self.feats:
-            family = feat.GetFamily()
-            if family not in self.pharmacophore_checkboxes:
-                self.pharmacophore_checkboxes[family] = Checkbox(value=False, description=f"Highlight {family}")
+
+        # Define all possible pharmacophore features
+        pharmacophore_families = ["Donor", "Acceptor", "Hydrophobe", "PosIonizable", "NegIonizable", "Aromatic", "LumpedHydrophobe"]
+
+        for family in pharmacophore_families:
+            self.pharmacophore_checkboxes[family] = Checkbox(value=False, description=f"Highlight {family}")
         
         # Save button click event
         self.save_button.on_click(self.save_selected_molecule)
@@ -99,16 +98,16 @@ class MoleculeVisualizer:
         self.hbond_props_checkbox.observe(self.update_display, names="value")
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
-
-    def update_pharmacophore_features(self, mol):
-        self.feats = self.factory.GetFeaturesForMol(mol)
     
     def draw_molecule(self, mol, show_atom_indices, width, height):
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
+        # Update pharmacophore features for the selected molecule
+        feats = self.factory.GetFeaturesForMol(mol)
+        
         # Pharmacophore highlighting
-        for feat in self.feats:
+        for feat in feats:
             family = feat.GetFamily()
             if self.pharmacophore_checkboxes[family].value:
                 atom_ids = feat.GetAtomIds()
@@ -143,9 +142,6 @@ class MoleculeVisualizer:
     def update_display(self, _=None):
         smiles = self.dropdown.value
         mol = self.fragments[smiles]
-
-        # Update pharmacophore features for the selected molecule
-        self.update_pharmacophore_features(mol)
         
         children = [
             self.draw_molecule(mol, self.show_atom_indices_checkbox.value, self.width, self.height),
