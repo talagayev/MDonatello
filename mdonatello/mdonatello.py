@@ -194,4 +194,4 @@ class MoleculeVisualizer:
         filename = "molecule.png"
         img = Draw.MolToImage(self.mol_noh)
         img.save(filename)
-        print(f"Molecule saved as '{filename}'")
+        logging.info(f"Molecule saved as '{filename}'")
