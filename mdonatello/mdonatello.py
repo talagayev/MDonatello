@@ -105,7 +105,14 @@ class MoleculeVisualizer:
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
 
-    def display_molecule(self, mol, show_atom_indices, width, height):
+    def display_molecule(self,):
+        return self.draw_molecule(
+            self.mol_noh,
+            show_atom_indices=self.show_atom_indices_checkbox.value,
+            highlight_aromatic=self.highlight_aromatic_checkbox.value,
+        )
+    
+    def draw_molecule(self, mol, show_atom_indices, width, height):
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -146,7 +153,7 @@ class MoleculeVisualizer:
         smiles = Chem.MolToSmiles(self.mol_noh)
         
         children = [
-            self.display_molecule(self.mol_noh, self.show_atom_indices_checkbox.value, self.width, self.height),
+            self.draw_molecule(self.mol_noh, self.show_atom_indices_checkbox.value, self.width, self.height),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>")
         ]
         
