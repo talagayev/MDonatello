@@ -10,11 +10,51 @@ import os
 
 
 class MoleculeVisualizer:
-    def __init__(self, ag, show_atom_indices=False):
-        self.ag = ag.convert_to("RDKit")
-        self.ag_noh = Chem.RemoveHs(self.ag)
-        AllChem.Compute2DCoords(self.ag_noh)
+    """A class for small molecule 2D visualization in jupyter notebook
+
+    Parameters:
+    -----------
+    ag : MDAnalysis.core.groups.AtomGroup
+        An AtomGroup object representing the molecules that need to be visualized.
+    show_atom_indices : bool, optional
+        Whether to display atom indices of the molecule. Default is False.
+    width : int, optional
+        The width of the image in pixels. Default is 300.
+    height : int, optional
+        The height of the image in pixels. Default is 300.
+
+    Methods:
+    --------
+    display_molecule(mol, show_atom_indices, width, height):
+        Display the molecule with specified options.
+    get_color_for_pharmacophore(family):
+        Get the color codes for highlighting a specific pharmacophore feature.
+    update_display():
+        Update the molecule display based on widget values.
+    display_molecular_weight(mol):
+        Display the molecular weight of the selected molecule.
+    display_logp(mol):
+        Display the LogP value of the selected molecule.
+    display_num_h_donors(mol):
+        Display the number of Hydrogen bond donors of the molecule.
+    display_num_h_acceptors(mol):
+        Display the number of Hydrogen bond acceptors of the molecule.
+    display_tpsa(mol):
+        Display the topological polar surface area (TPSA) of the molecule.
+    display_rotatable_bonds(mol):
+        Display the number of rotatable bonds present in the molecule.
+    save_selected_molecule(_):
+        Save the currently displayed molecule as an image. """
+   
+    def __init__(self, ag, show_atom_indices=False, width=300, height=300):
+        self.mol = ag.convert_to("RDKit")
+        self.mol_noh = Chem.RemoveHs(self.mol)
+        AllChem.Compute2DCoords(self.mol_noh)
         self.molecule_list = ["Molecule"]
+
+        # Add height and width
+        self.width = width
+        self.height = height
         
         # Create the dropdown and other widgets
         self.dropdown = Dropdown(
@@ -30,7 +70,7 @@ class MoleculeVisualizer:
         # Pharmacophore feature detection
         self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
         self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
-        self.feats = self.factory.GetFeaturesForMol(self.ag_noh)
+        self.feats = self.factory.GetFeaturesForMol(self.mol_noh)
 
         # Dynamically create checkboxes for each unique pharmacophore type
         self.pharmacophore_checkboxes = {}
@@ -65,7 +105,7 @@ class MoleculeVisualizer:
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
 
-    def display_molecule(self, ag, show_atom_indices):
+    def display_molecule(self, mol, show_atom_indices, width, height):
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -79,17 +119,11 @@ class MoleculeVisualizer:
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
-        if show_atom_indices:
-            for atom in ag.GetAtoms():
-                atom.SetProp("atomNote", str(atom.GetIdx()))
-        else:
-            for atom in ag.GetAtoms():
-                atom.ClearProp("atomNote")
-
-        d = rdMolDraw2D.MolDraw2DSVG(300, 300)
+        d = rdMolDraw2D.MolDraw2DSVG(width, height)
+        d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
         rdMolDraw2D.PrepareAndDrawMolecule(
-            d, ag, highlightAtoms=highlights["atoms"], highlightBonds=highlights["bonds"],
+            d, mol, highlightAtoms=highlights["atoms"], highlightBonds=highlights["bonds"],
             highlightAtomColors=highlight_colors, highlightBondColors=highlight_colors
         )
         d.FinishDrawing()
@@ -109,55 +143,55 @@ class MoleculeVisualizer:
         return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
     
     def update_display(self, _=None):
-        smiles = Chem.MolToSmiles(self.ag_noh)
+        smiles = Chem.MolToSmiles(self.mol_noh)
         
         children = [
-            self.display_molecule(self.ag_noh, self.show_atom_indices_checkbox.value),
+            self.display_molecule(self.mol_noh, self.show_atom_indices_checkbox.value, self.width, self.height),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>")
         ]
         
         if self.physiochem_props_checkbox.value:
             children.extend([
-                self.display_molecular_weight(self.ag_noh),
-                self.display_logp(self.ag_noh),
-                self.display_tpsa(self.ag_noh),
-                self.display_rotatable_bonds(self.ag_noh)
+                self.display_molecular_weight(self.mol_noh),
+                self.display_logp(self.mol_noh),
+                self.display_tpsa(self.mol_noh),
+                self.display_rotatable_bonds(self.mol_noh)
             ])
             
         if self.hbond_props_checkbox.value:
             children.extend([
-                self.display_num_h_donors(self.ag_noh),
-                self.display_num_h_acceptors(self.ag_noh)
+                self.display_num_h_donors(self.mol_noh),
+                self.display_num_h_acceptors(self.mol_noh)
             ])
         
         self.output_molecule.children = children
         
-    def display_molecular_weight(self, ag):
-        mw = Descriptors.MolWt(ag)
+    def display_molecular_weight(self, mol):
+        mw = Descriptors.MolWt(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {:.2f} g/mol</p>".format(mw))
         
-    def display_logp(self, ag):
-        logp = Descriptors.MolLogP(ag)
+    def display_logp(self, mol):
+        logp = Descriptors.MolLogP(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>LogP: {:.2f}</p>".format(logp))
 
-    def display_num_h_donors(self, ag):
-        num_h_donors = Descriptors.NumHDonors(ag)
+    def display_num_h_donors(self, mol):
+        num_h_donors = Descriptors.NumHDonors(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {:.0f}</p>".format(num_h_donors))
 
-    def display_num_h_acceptors(self, ag):
-        num_h_acceptors = Descriptors.NumHAcceptors(ag)
+    def display_num_h_acceptors(self, mol):
+        num_h_acceptors = Descriptors.NumHAcceptors(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {:.0f}</p>".format(num_h_acceptors))
     
-    def display_tpsa(self, ag):
-        tpsa = Descriptors.TPSA(ag)
+    def display_tpsa(self, mol):
+        tpsa = Descriptors.TPSA(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {:.2f} Å²</p>".format(tpsa))
         
-    def display_rotatable_bonds(self, ag):
-        rotatable_bonds = Descriptors.NumRotatableBonds(ag)
+    def display_rotatable_bonds(self, mol):
+        rotatable_bonds = Descriptors.NumRotatableBonds(mol)
         return HTML("<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {:.0f}</p>".format(rotatable_bonds))
         
     def save_selected_molecule(self, _):
         filename = "molecule.png"
-        img = Draw.MolToImage(self.ag_noh)
+        img = Draw.MolToImage(self.mol_noh)
         img.save(filename)
         print(f"Molecule saved as '{filename}'")
