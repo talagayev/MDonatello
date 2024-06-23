@@ -116,6 +116,21 @@ class MoleculeVisualizer:
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
+        # Specific higlighting for Aromatic pharmacophore
+        if self.pharmacophore_checkboxes["Aromatic"].value:
+            hit_ats = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()]
+            hit_bonds = [
+                bond.GetIdx() for bond in mol.GetBonds() 
+                if bond.GetBeginAtom().GetIsAromatic() and bond.GetEndAtom().GetIsAromatic()
+            ]
+            highlights["atoms"].extend(hit_ats)
+            highlights["bonds"].extend(hit_bonds)
+            color = self.get_color_for_pharmacophore("Aromatic")
+            for atom_id in hit_ats:
+                highlight_colors[atom_id] = color
+            for bond_id in hit_bonds:
+                highlight_colors[bond_id] = color
+        
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
