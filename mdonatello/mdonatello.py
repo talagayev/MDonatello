@@ -132,6 +132,17 @@ class MoleculeVisualizer:
                 highlight_colors[atom_id] = color
             for bond_id in hit_bonds:
                 highlight_colors[bond_id] = color
+
+        # Functional group highlighting
+        if self.functional_groups_checkbox.value:
+            fg_counts = self.calculate_functional_groups(mol)
+            for fg, atom_indices in fg_counts.items():
+                fg_checkbox_name = f"fg_checkbox_{fg}"
+                if hasattr(self, fg_checkbox_name) and getattr(self, fg_checkbox_name).value:
+                    highlights["atoms"].extend(atom_indices)
+                    color = self.get_color_for_functional_group(fg)
+                    for atom_id in atom_indices:
+                        highlight_colors[atom_id] = color
         
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
@@ -155,6 +166,20 @@ class MoleculeVisualizer:
             "LumpedHydrophobe": (1.0, 0.5, 0.0)  # Orange
         }
         return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
+
+    def get_color_for_functional_group(self, fg):
+        parts = fg.split('(')
+        smarts_part = parts[1]
+        if "P" in smarts_part:
+            return (1.0, 0.5, 0.0)  # Light orange for phosphore containing groups
+        elif "S" in smarts_part:
+            return (1.0, 1.0, 0.0)  # Yellow for sulfure containing groups
+        elif "N" in smarts_part:
+            return (0.5, 0.5, 1.0)  # Light blue for nitrogen containing groups
+        elif "O" in smarts_part:
+            return (1.0, 0.7, 0.7)  # Red for oxygen containing groups
+        else:
+            return (1.0, 0.5, 0.0)  # Default to pink if no specific color assigned
     
     def update_display(self, _=None):
         smiles = self.dropdown.value
@@ -172,15 +197,30 @@ class MoleculeVisualizer:
                 self.display_tpsa(mol),
                 self.display_rotatable_bonds(mol)
             ])
-
-        if self.functional_groups_checkbox.value:
-            children.append(self.display_functional_groups(mol))
             
         if self.hbond_props_checkbox.value:
             children.extend([
                 self.display_num_h_donors(mol),
                 self.display_num_h_acceptors(mol)
             ])
+
+        if self.functional_groups_checkbox.value:
+            functional_groups_header = HTML("<h3>Functional Groups</h3>")
+            fg_counts = self.calculate_functional_groups(mol)
+            fg_checkboxes = []
+            for fg, atom_indices in fg_counts.items():
+                if atom_indices:
+                    fg_checkbox_name = f"fg_checkbox_{fg}"
+                    if not hasattr(self, fg_checkbox_name):
+                        checkbox = Checkbox(value=False, description=fg)
+                        setattr(self, fg_checkbox_name, checkbox)
+                        checkbox.observe(self.update_display, names="value")
+                    fg_checkboxes.append(getattr(self, fg_checkbox_name))
+            
+            if fg_checkboxes:
+                fg_hbox = HBox(fg_checkboxes)
+                children.append(functional_groups_header)
+                children.append(fg_hbox)
         
         self.output_molecule.children = children
         
@@ -208,22 +248,15 @@ class MoleculeVisualizer:
         rotatable_bonds = Descriptors.NumRotatableBonds(mol)
         return HTML(f"<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {rotatable_bonds}</p>")
 
-    def display_functional_groups(self, mol):
-        fg_counts = self.calculate_functional_groups(mol)
-        fg_names = [fg for fg, count in fg_counts.items() if count > 0]
-        
-        functional_groups_header = HTML("<h3>Functional Groups</h3>")
-        fg_checkboxes = [Checkbox(value=False, description=fg) for fg in fg_names]
-        fg_hbox = HBox(fg_checkboxes)
-        
-        return VBox([functional_groups_header, fg_hbox])
+
     
     def calculate_functional_groups(self, mol):
         functional_groups = {
             'Hydroxyl group (-OH)': '[OX2H]',
             'Primary amine (-NH2)': '[NX3H2]',
+            'Primary ammonium (-NH3+)': '[+NX4;H3]',
             'Secondary amine (-NH-)': '[NX3H][#6]',
-            'Tertiary amine (-N<)': '[NX3]([#6])[#6]',
+            'Tertiary amine (-N<)': '[NX3;H0]([#6])[#6]',
             'Carboxyl group (-COOH)': 'C(=O)[OX2H1]',
             'Ester (-COOR)': 'C(=O)[OX2H0][#6]',
             'Amide (-CON-)': 'C(=O)[NX3]',
@@ -236,10 +269,30 @@ class MoleculeVisualizer:
             'Thiol group (-SH)': '[SX2H]',
             'Azide group (-N3)': 'N=[NX1]=[NX1]',
             'Furan ring': 'c1occc1',
-            'Guanidine group (-C(=NH)(N)(NH2))': 'C(=N)(N)[NH2]'
+            'Guanidine group (-C(=NH)(N)(NH2))': 'C(=N)(N)[NH2]',
+            'Isothiocyanate (-N=C=S)': '[NX2]=C=[SX2]',
+            'Isocyanate (-N=C=O)': '[NX2]=C=[OX1]',
+            'Lactone (C=O-O)': '[CX3](=O)[OX2][CX3](=O)',
+            'Lactam (C=O-N)': '[CX3](=O)[NX3][CX3](=O)',
+            'Methoxy group (-OCH3)': '[OX2][CH3]',
+            'Nitro group (-NO2)': '[NX3](=O)=O',
+            'Nitroso group (-NO)': '[NX2]=O',
+            'Oxazole ring': 'c1noccc1',
+            'Oxime group (-C=N-OH)': '[CX3](=N[OX2H])',
+            'Epoxide': 'C1CO1',
+            'Nitrile': 'C#N',
+            'Sulfone': 'S(=O)(=O)([#6])([#6])',
+            'Sulfonamide': 'S(=O)(=O)([#6])N',
+            'Sulfide': '[SX2]',
+            'Urea': 'C(=O)(N)(N)',
+            'Phosphoric Ester': 'P(=O)(O)([OX2H0;R1])',
+            'Phosphoric Acid': 'P(=O)(O)(O)'
         }
         
-        fg_counts = {fg: len(mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))) for fg, smarts in functional_groups.items()}
+        fg_counts = {}
+        for fg, smarts in functional_groups.items():
+            substruct_matches = mol.GetSubstructMatches(Chem.MolFromSmarts(smarts))
+            fg_counts[fg] = [atom_idx for match in substruct_matches for atom_idx in match]
         return fg_counts
     
     def save_selected_molecule(self, _):
