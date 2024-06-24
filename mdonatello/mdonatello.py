@@ -143,6 +143,11 @@ class MoleculeVisualizer:
                     color = self.get_color_for_functional_group(fg)
                     for atom_id in atom_indices:
                         highlight_colors[atom_id] = color
+                    # Highlight bonds between functional group atoms
+                    for bond in mol.GetBonds():
+                        if bond.GetBeginAtomIdx() in atom_indices and bond.GetEndAtomIdx() in atom_indices:
+                            highlights["bonds"].append(bond.GetIdx())
+                            highlight_colors[bond.GetIdx()] = color
         
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
