@@ -34,14 +34,14 @@ class MoleculeVisualizer:
         
     """
    
-    def __init__(self, ag, show_atom_indices=False, width=-1, height=-1):
-        self.mol = ag.convert_to("RDKit")
-        self.mol_noh = Chem.RemoveHs(self.mol)
+    def __init__(self, ag: mda.core.groups.AtomGroup, show_atom_indices: bool = False, width: int = -1, height: int = -1):
+        self.mol: Chem.Mol = ag.convert_to("RDKit")
+        self.mol_noh: Chem.Mol = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
 
         # Get individual fragments
-        fragments = Chem.GetMolFrags(self.mol_noh, asMols=True)
-        self.molecule_list = [Chem.MolToSmiles(frag) for frag in fragments]
+        fragments: list[Chem.Mol] = Chem.GetMolFrags(self.mol_noh, asMols=True)
+        self.molecule_list: list[str] = [Chem.MolToSmiles(frag) for frag in fragments]
         self.fragments = {
             smiles: frag for smiles, frag in zip(self.molecule_list, fragments)
         }
