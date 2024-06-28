@@ -42,13 +42,13 @@ class MoleculeVisualizer:
         # Get individual fragments
         fragments: list[Chem.Mol] = Chem.GetMolFrags(self.mol_noh, asMols=True)
         self.molecule_list: list[str] = [Chem.MolToSmiles(frag) for frag in fragments]
-        self.fragments = {
+        self.fragments: dict[str, Chem.Mol] = {
             smiles: frag for smiles, frag in zip(self.molecule_list, fragments)
         }
 
         # Add height and width
-        self.width = width
-        self.height = height
+        self.width: int = width
+        self.height: int = height
         
         # Create the dropdown and other widgets
         self.dropdown = Dropdown(
