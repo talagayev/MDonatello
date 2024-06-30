@@ -16,7 +16,63 @@ from IPython.display import display, clear_output
 from io import BytesIO
 import base64
 import os
+from functools import cached_property
 
+
+class Property:
+    name = 'property'
+    
+    def __init__(self, mol):
+        self.mol = mol
+    
+    @cached_property
+    def property_value(self):
+        raise NotImplementedError('Subclasses should implement this.')
+    
+    def __repr__(self):
+        return f"<p style='margin: 0; margin-left: 100px;'>Number of {self.name}: {self.property_value:.2f}</p>"
+
+class MolecularWeight(Property):
+    name = 'Molecular Weight'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.MolWt(self.mol)
+
+class LogP(Property):
+    name = 'LogP'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.MolLogP(self.mol)
+
+class TPSA(Property):
+    name = 'TPSA'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.TPSA(self.mol)
+
+class RotatableBonds(Property):
+    name = 'Rotatable Bonds'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.NumRotatableBonds(self.mol)
+
+class HydrogenBondAcceptors(Property):
+    name = 'Hydrogen Bond Acceptors'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.NumHAcceptors(self.mol)
+
+class HydrogenBondDonors(Property):
+    name = 'Hydrogen Bond Donors'
+
+    @cached_property
+    def property_value(self):
+        return Descriptors.NumHDonors(self.mol)
 
 class MoleculeVisualizer:
     """A class for small molecule 2D visualization in jupyter notebook
@@ -245,12 +301,12 @@ class MoleculeVisualizer:
     
     def update_display(self, _=None):
         smiles = self.dropdown.value
-        mol = self.fragments[smiles]
+        self.current_mol = self.fragments[smiles]
 
         children = [
             HTML(
                 self.draw_molecule(
-                    mol,
+                    self.current_mol,
                     self.show_atom_indices_checkbox.value,
                     self.width,
                     self.height,
@@ -260,26 +316,26 @@ class MoleculeVisualizer:
         ]
         
         if self.physiochem_props_checkbox.value:
-            children.extend(
-                [
-                    self.display_molecular_weight(mol),
-                    self.display_logp(mol),
-                    self.display_tpsa(mol),
-                    self.display_rotatable_bonds(mol),
-                ]
-            )
+            physiochem_properties = [
+                MolecularWeight(self.current_mol),
+                LogP(self.current_mol),
+                TPSA(self.current_mol),
+                RotatableBonds(self.current_mol)
+            ]
+            physiochem_html = [HTML(repr(prop)) for prop in physiochem_properties]
+            children.extend(physiochem_html)
             
         if self.hbond_props_checkbox.value:
-            children.extend(
-                [
-                    self.display_num_h_donors(mol),
-                    self.display_num_h_acceptors(mol),
-                ]
-            )
+            hbond_properties = [
+                HydrogenBondAcceptors(self.current_mol),
+                HydrogenBondDonors(self.current_mol),
+            ]
+            hbond_html = [HTML(repr(prop)) for prop in hbond_properties]
+            children.extend(hbond_html)
 
         if self.functional_groups_checkbox.value:
             functional_groups_header = HTML("<h3>Functional Groups</h3>")
-            fg_counts = self.calculate_functional_groups(mol)
+            fg_counts = self.calculate_functional_groups()
             fg_checkboxes = []
             for fg, atom_indices in fg_counts.items():
                 if atom_indices:
@@ -297,43 +353,10 @@ class MoleculeVisualizer:
         
         self.output_molecule.children = children
         
-    def display_molecular_weight(self, mol):
-        mw = Descriptors.MolWt(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {mw:.2f} g/mol</p>"
-        )
-        
-    def display_logp(self, mol):
-        logp = Descriptors.MolLogP(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>LogP: {logp:.2f}</p>"
-        )
 
-    def display_num_h_donors(self, mol):
-        num_h_donors = Descriptors.NumHDonors(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>"
-        )
-
-    def display_num_h_acceptors(self, mol):
-        num_h_acceptors = Descriptors.NumHAcceptors(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {num_h_acceptors}</p>"
-        )
-
-    def display_tpsa(self, mol):
-        tpsa = Descriptors.TPSA(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {tpsa:.2f} Å²</p>"
-        )
-
-    def display_rotatable_bonds(self, mol):
-        rotatable_bonds = Descriptors.NumRotatableBonds(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {rotatable_bonds}</p>"
-        )
- 
-    def calculate_functional_groups(self, mol):
+    def calculate_functional_groups(self, mol=None):
+        if mol is None:
+            mol = self.current_mol
         functional_groups = {
             'Hydroxyl group (-OH)': '[OX2H]',
             'Primary amine (-NH2)': '[NX3H2]',
