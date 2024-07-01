@@ -387,7 +387,7 @@ class MoleculeVisualizer:
 
         if self.functional_groups_checkbox.value:
             functional_groups_header = HTML("<h3>Functional Groups</h3>")
-            fg_counts = self.FunctionalGroupHandler.calculate_functional_groups(self.current_mol)
+            fg_counts = FunctionalGroupHandler.calculate_functional_groups(self.current_mol)
             fg_checkboxes = []
             for fg, atom_indices in fg_counts.items():
                 if atom_indices:
