@@ -277,8 +277,8 @@ class MoleculeVisualizer:
         )
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
-    
-    def draw_molecule(self, mol, show_atom_indices, width, height):
+
+    def determine_highlights(self, mol):
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -297,14 +297,10 @@ class MoleculeVisualizer:
 
         # Specific highlighting for Aromatic pharmacophore
         if self.pharmacophore_checkboxes["Aromatic"].value:
-            hit_ats = [
-                atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()
-            ]
+            hit_ats = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()]
             hit_bonds = [
-                bond.GetIdx()
-                for bond in mol.GetBonds()
-                if bond.GetBeginAtom().GetIsAromatic()
-                and bond.GetEndAtom().GetIsAromatic()
+                bond.GetIdx() for bond in mol.GetBonds()
+                if bond.GetBeginAtom().GetIsAromatic() and bond.GetEndAtom().GetIsAromatic()
             ]
             highlights["atoms"].extend(hit_ats)
             highlights["bonds"].extend(hit_bonds)
@@ -319,23 +315,22 @@ class MoleculeVisualizer:
             fg_counts = FunctionalGroupHandler.calculate_functional_groups(mol)
             for fg, atom_indices in fg_counts.items():
                 fg_checkbox_name = f"fg_checkbox_{fg}"
-                if (
-                    hasattr(self, fg_checkbox_name)
-                    and getattr(self, fg_checkbox_name).value
-                ):
+                if hasattr(self, fg_checkbox_name) and getattr(self, fg_checkbox_name).value:
                     highlights["atoms"].extend(atom_indices)
                     color = FunctionalGroupHandler.get_color_for_functional_group(fg)
                     for atom_id in atom_indices:
                         highlight_colors[atom_id] = color
                     # Highlight bonds between functional group atoms
                     for bond in mol.GetBonds():
-                        if (
-                            bond.GetBeginAtomIdx() in atom_indices
-                            and bond.GetEndAtomIdx() in atom_indices
-                        ):
+                        if bond.GetBeginAtomIdx() in atom_indices and bond.GetEndAtomIdx() in atom_indices:
                             highlights["bonds"].append(bond.GetIdx())
                             highlight_colors[bond.GetIdx()] = color
-        
+
+        return highlights, highlight_colors
+    
+    def draw_molecule(self, mol, show_atom_indices, width, height):
+        highlights, highlight_colors = self.determine_highlights(mol)
+
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
