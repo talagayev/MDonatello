@@ -74,6 +74,86 @@ class HydrogenBondDonors(Property):
     def property_value(self):
         return Descriptors.NumHDonors(self.mol)
 
+class PharmacophoreColorMapper:
+    @staticmethod
+    def get_color_for_pharmacophore(family):
+        color_map = {
+            "Donor": (0.0, 1.0, 0.0),    # Green
+            "Acceptor": (1.0, 0.7, 0.7),  # Rosa
+            "Hydrophobe": (1.0, 1.0, 0.0),  # Yellow
+            "PosIonizable": (0.0, 1.0, 1.0),  # Turquoise
+            "NegIonizable": (1.0, 0.0, 1.0),  # Pink
+            "Aromatic": (0.5, 0.5, 1.0),  # Light Blue
+            "LumpedHydrophobe": (1.0, 0.5, 0.0),  # Orange
+        }
+        return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
+
+class FunctionalGroupHandler:
+    @staticmethod
+    def calculate_functional_groups(mol):
+        functional_groups = {
+            'Hydroxyl group (-OH)': '[OX2H]',
+            'Primary amine (-NH2)': '[NX3H2]',
+            'Primary ammonium (-NH3+)': '[+NX4;H3]',
+            'Secondary amine (-NH-)': '[NX3H][#6]',
+            'Tertiary amine (-N<)': '[NX3;H0]([#6])[#6]',
+            'Carboxyl group (-COOH)': 'C(=O)[OX2H1]',
+            'Ester (-COOR)': 'C(=O)[OX2H0][#6]',
+            'Amide (-CON-)': 'C(=O)[NX3]',
+            'Aldehyde (-CHO)': '[CX3H1](=O)[#6]',
+            'Ketone (C=O)': '[CX3](=O)[#6]',
+            'Ether (R-O-R)': '[#6][OX2][#6]',
+            'Thiocarbonyl group (C=S)': 'C(=S)',
+            'Imine group (-C=N-)': '[CX3](=N)',
+            'Hydroxylamine group (-N(OH))': '[NX3][OX2H]',
+            'Thiol group (-SH)': '[SX2H]',
+            'Azide group (-N3)': 'N=[NX1]=[NX1]',
+            'Furan ring': 'c1occc1',
+            'Guanidine group (-C(=NH)(N)(NH2))': 'C(=N)(N)[NH2]',
+            'Isothiocyanate (-N=C=S)': '[NX2]=C=[SX2]',
+            'Isocyanate (-N=C=O)': '[NX2]=C=[OX1]',
+            'Lactone (C=O-O)': '[CX3](=O)[OX2][CX3](=O)',
+            'Lactam (C=O-N)': '[CX3](=O)[NX3][CX3](=O)',
+            'Methoxy group (-OCH3)': '[OX2][CH3]',
+            'Nitro group (-NO2)': '[NX3](=O)=O',
+            'Nitroso group (-NO)': '[NX2]=O',
+            'Oxazole ring': 'c1noccc1',
+            'Oxime group (-C=N-OH)': '[CX3](=N[OX2H])',
+            'Epoxide': 'C1CO1',
+            'Nitrile': 'C#N',
+            'Sulfone': 'S(=O)(=O)([#6])([#6])',
+            'Sulfonamide': 'S(=O)(=O)([#6])N',
+            'Sulfide': '[SX2]',
+            'Urea': 'C(=O)(N)(N)',
+            'Phosphoric Ester': 'P(=O)(O)([OX2H0;R1])',
+            'Phosphoric Acid': 'P(=O)(O)(O)'
+        }
+        
+        fg_counts = {}
+        for fg, smarts in functional_groups.items():
+            substruct_matches = mol.GetSubstructMatches(
+                Chem.MolFromSmarts(smarts)
+            )
+            fg_counts[fg] = [
+                atom_idx for match in substruct_matches for atom_idx in match
+            ]
+        return fg_counts
+    
+    @staticmethod
+    def get_color_for_functional_group(fg):
+        parts = fg.split('(')
+        smarts_part = parts[1]
+        if "P" in smarts_part:
+            return (1.0, 0.5, 0.0)  # Orange for phosphore containing groups
+        elif "S" in smarts_part:
+            return (1.0, 1.0, 0.0)  # Yellow for sulfure containing groups
+        elif "N" in smarts_part:
+            return (0.5, 0.5, 1.0)  # Light blue for nitrogen containing groups
+        elif "O" in smarts_part:
+            return (1.0, 0.7, 0.7)  # Red for oxygen containing groups
+        else:
+            return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
+
 class MoleculeVisualizer:
     """A class for small molecule 2D visualization in jupyter notebook
 
@@ -211,7 +291,7 @@ class MoleculeVisualizer:
             if self.pharmacophore_checkboxes[family].value:
                 atom_ids = feat.GetAtomIds()
                 highlights["atoms"].extend(atom_ids)
-                color = self.get_color_for_pharmacophore(family)
+                color = PharmacophoreColorMapper.get_color_for_pharmacophore(family)
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
@@ -228,7 +308,7 @@ class MoleculeVisualizer:
             ]
             highlights["atoms"].extend(hit_ats)
             highlights["bonds"].extend(hit_bonds)
-            color = self.get_color_for_pharmacophore("Aromatic")
+            color = PharmacophoreColorMapper.get_color_for_pharmacophore("Aromatic")
             for atom_id in hit_ats:
                 highlight_colors[atom_id] = color
             for bond_id in hit_bonds:
@@ -236,7 +316,7 @@ class MoleculeVisualizer:
 
         # Functional group highlighting
         if self.functional_groups_checkbox.value:
-            fg_counts = self.calculate_functional_groups(mol)
+            fg_counts = FunctionalGroupHandler.calculate_functional_groups(mol)
             for fg, atom_indices in fg_counts.items():
                 fg_checkbox_name = f"fg_checkbox_{fg}"
                 if (
@@ -244,7 +324,7 @@ class MoleculeVisualizer:
                     and getattr(self, fg_checkbox_name).value
                 ):
                     highlights["atoms"].extend(atom_indices)
-                    color = self.get_color_for_functional_group(fg)
+                    color = FunctionalGroupHandler.get_color_for_functional_group(fg)
                     for atom_id in atom_indices:
                         highlight_colors[atom_id] = color
                     # Highlight bonds between functional group atoms
@@ -271,34 +351,6 @@ class MoleculeVisualizer:
         svg = d.GetDrawingText()
         return svg
         
-    def get_color_for_pharmacophore(self, family):
-        color_map = {
-            "Donor": (0.0, 1.0, 0.0),  # Green
-            "Acceptor": (1.0, 0.7, 0.7),  # Rosa
-            "Hydrophobe": (1.0, 1.0, 0.0),  # Yellow
-            "PosIonizable": (0.0, 1.0, 1.0),  # Turquoise
-            "NegIonizable": (1.0, 0.0, 1.0),  # Pink
-            "Aromatic": (0.5, 0.5, 1.0),  # Light Blue
-            "LumpedHydrophobe": (1.0, 0.5, 0.0),  # Orange
-        }
-        return color_map.get(
-            family, (0.5, 0.5, 0.5)
-        )  # Default to grey if not specified
-
-    def get_color_for_functional_group(self, fg):
-        parts = fg.split('(')
-        smarts_part = parts[1]
-        if "P" in smarts_part:
-            return (1.0, 0.5, 0.0)  # Orange for phosphore containing groups
-        elif "S" in smarts_part:
-            return (1.0, 1.0, 0.0)  # Yellow for sulfure containing groups
-        elif "N" in smarts_part:
-            return (0.5, 0.5, 1.0)  # Light blue for nitrogen containing groups
-        elif "O" in smarts_part:
-            return (1.0, 0.7, 0.7)  # Red for oxygen containing groups
-        else:
-            return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
-    
     def update_display(self, _=None):
         smiles = self.dropdown.value
         self.current_mol = self.fragments[smiles]
@@ -353,58 +405,6 @@ class MoleculeVisualizer:
         
         self.output_molecule.children = children
         
-
-    def calculate_functional_groups(self, mol=None):
-        if mol is None:
-            mol = self.current_mol
-        functional_groups = {
-            'Hydroxyl group (-OH)': '[OX2H]',
-            'Primary amine (-NH2)': '[NX3H2]',
-            'Primary ammonium (-NH3+)': '[+NX4;H3]',
-            'Secondary amine (-NH-)': '[NX3H][#6]',
-            'Tertiary amine (-N<)': '[NX3;H0]([#6])[#6]',
-            'Carboxyl group (-COOH)': 'C(=O)[OX2H1]',
-            'Ester (-COOR)': 'C(=O)[OX2H0][#6]',
-            'Amide (-CON-)': 'C(=O)[NX3]',
-            'Aldehyde (-CHO)': '[CX3H1](=O)[#6]',
-            'Ketone (C=O)': '[CX3](=O)[#6]',
-            'Ether (R-O-R)': '[#6][OX2][#6]',
-            'Thiocarbonyl group (C=S)': 'C(=S)',
-            'Imine group (-C=N-)': '[CX3](=N)',
-            'Hydroxylamine group (-N(OH))': '[NX3][OX2H]',
-            'Thiol group (-SH)': '[SX2H]',
-            'Azide group (-N3)': 'N=[NX1]=[NX1]',
-            'Furan ring': 'c1occc1',
-            'Guanidine group (-C(=NH)(N)(NH2))': 'C(=N)(N)[NH2]',
-            'Isothiocyanate (-N=C=S)': '[NX2]=C=[SX2]',
-            'Isocyanate (-N=C=O)': '[NX2]=C=[OX1]',
-            'Lactone (C=O-O)': '[CX3](=O)[OX2][CX3](=O)',
-            'Lactam (C=O-N)': '[CX3](=O)[NX3][CX3](=O)',
-            'Methoxy group (-OCH3)': '[OX2][CH3]',
-            'Nitro group (-NO2)': '[NX3](=O)=O',
-            'Nitroso group (-NO)': '[NX2]=O',
-            'Oxazole ring': 'c1noccc1',
-            'Oxime group (-C=N-OH)': '[CX3](=N[OX2H])',
-            'Epoxide': 'C1CO1',
-            'Nitrile': 'C#N',
-            'Sulfone': 'S(=O)(=O)([#6])([#6])',
-            'Sulfonamide': 'S(=O)(=O)([#6])N',
-            'Sulfide': '[SX2]',
-            'Urea': 'C(=O)(N)(N)',
-            'Phosphoric Ester': 'P(=O)(O)([OX2H0;R1])',
-            'Phosphoric Acid': 'P(=O)(O)(O)'
-        }
-        
-        fg_counts = {}
-        for fg, smarts in functional_groups.items():
-            substruct_matches = mol.GetSubstructMatches(
-                Chem.MolFromSmarts(smarts)
-            )
-            fg_counts[fg] = [
-                atom_idx for match in substruct_matches for atom_idx in match
-            ]
-        return fg_counts
-    
     def save_selected_molecule(self, _):
         smiles = self.dropdown.value
         mol = self.fragments[smiles]
