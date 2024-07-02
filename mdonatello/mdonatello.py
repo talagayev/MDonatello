@@ -158,7 +158,7 @@ class MoleculeDrawer:
     def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkbox, factory):
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
-        self.functional_groups_checkbox = functional_groups_checkbox
+        self.functional_groups_checkboxes = functional_groups_checkboxes
         self.factory = factory
 
     def determine_pharmacophore_highlights(self):
@@ -202,25 +202,24 @@ class MoleculeDrawer:
         highlight_colors = {}
 
         # Functional group highlighting
-        if self.functional_groups_checkbox.value:
-            fg_counts = FunctionalGroupHandler.calculate_functional_groups(mol)
+        fg_counts = FunctionalGroupHandler.calculate_functional_groups(mol)
         
-            # Iterate over calculated functional groups and highlight their atoms and bonds
-            for fg, atom_indices in fg_counts.items():
-                if atom_indices:
-                    highlights["atoms"].extend(atom_indices)
-                    
-                    # Highlight bonds associated with the atoms
-                    for atom_idx in atom_indices:
-                        atom = mol.GetAtomWithIdx(atom_idx)
-                        for neighbor in atom.GetNeighbors():
-                            bond = mol.GetBondBetweenAtoms(atom.GetIdx(), neighbor.GetIdx())
-                            if bond is not None:
-                                highlights["bonds"].append(bond.GetIdx())
-                    
-                    highlight_color = FunctionalGroupHandler.get_color_for_functional_group(fg)
-                    for atom_idx in atom_indices:
-                        highlight_colors[atom_idx] = highlight_color
+        # Iterate over calculated functional groups and highlight their atoms and bonds
+        for fg, atom_indices in fg_counts.items():
+            if atom_indices and self.functional_groups_checkboxes[fg].value:
+                highlights["atoms"].extend(atom_indices)
+                
+                # Highlight bonds associated with the atoms
+                for atom_idx in atom_indices:
+                    atom = mol.GetAtomWithIdx(atom_idx)
+                    for neighbor in atom.GetNeighbors():
+                        bond = mol.GetBondBetweenAtoms(atom.GetIdx(), neighbor.GetIdx())
+                        if bond is not None:
+                            highlights["bonds"].append(bond.GetIdx())
+                
+                highlight_color = FunctionalGroupHandler.get_color_for_functional_group(fg)
+                for atom_idx in atom_indices:
+                    highlight_colors[atom_idx] = highlight_color
 
         return highlights, highlight_colors
     
@@ -378,10 +377,22 @@ class MoleculeVisualizer:
         smiles = self.dropdown.value
         self.current_mol = self.fragments[smiles]
 
+        # Update functional group checkboxes dynamically
+        fg_counts = FunctionalGroupHandler.calculate_functional_groups(self.current_mol)
+        self.functional_group_checkboxes = {}
+        for fg, atom_indices in fg_counts.items():
+            if atom_indices:
+                fg_checkbox_name = f"fg_checkbox_{fg}"
+                if not hasattr(self, fg_checkbox_name):
+                    checkbox = Checkbox(value=False, description=fg)
+                    setattr(self, fg_checkbox_name, checkbox)
+                    checkbox.observe(self.update_display, names="value")
+                self.functional_group_checkboxes[fg] = getattr(self, fg_checkbox_name)
+
         drawer = MoleculeDrawer(
             molecule=self.current_mol,
             pharmacophore_checkboxes=self.pharmacophore_checkboxes,
-            functional_groups_checkbox=self.functional_groups_checkbox,
+            functional_groups_checkboxes=self.functional_group_checkboxes,
             factory=self.factory
         )
         
@@ -414,20 +425,15 @@ class MoleculeVisualizer:
             hbond_html = [HTML(repr(prop)) for prop in hbond_properties]
             children.extend(hbond_html)
 
+        # Show or hide functional group checkboxes based on the main functional groups checkbox
         if self.functional_groups_checkbox.value:
             functional_groups_header = HTML("<h3>Functional Groups</h3>")
-            fg_counts = FunctionalGroupHandler.calculate_functional_groups(self.current_mol)
-            fg_list = []
-
-            for fg, atom_indices in fg_counts.items():
-                if atom_indices:
-                    fg_entry = f"<b>{fg}:</b> {atom_indices}"
-                    fg_list.append(HTML(fg_entry))
-        
-            if fg_list:
+            fg_checkboxes = list(self.functional_group_checkboxes.values())
+            if fg_checkboxes:
+                fg_hbox = HBox(fg_checkboxes)
                 children.append(functional_groups_header)
-                children.extend(fg_list)
-        
+                children.append(fg_hbox)
+
         self.output_molecule.children = children
         
     def save_selected_molecule(self, _):
