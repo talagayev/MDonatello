@@ -155,7 +155,7 @@ class FunctionalGroupHandler:
             return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
 
 class MoleculeDrawer:
-    def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkbox, factory):
+    def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkboxes, factory):
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
         self.functional_groups_checkboxes = functional_groups_checkboxes
