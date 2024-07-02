@@ -203,20 +203,26 @@ class MoleculeDrawer:
 
         # Functional group highlighting
         fg_counts = FunctionalGroupHandler.calculate_functional_groups(mol)
-        
+    
         # Iterate over calculated functional groups and highlight their atoms and bonds
         for fg, atom_indices in fg_counts.items():
             if atom_indices and self.functional_groups_checkboxes[fg].value:
                 highlights["atoms"].extend(atom_indices)
-                
-                # Highlight bonds associated with the atoms
-                for atom_idx in atom_indices:
-                    atom = mol.GetAtomWithIdx(atom_idx)
-                    for neighbor in atom.GetNeighbors():
-                        bond = mol.GetBondBetweenAtoms(atom.GetIdx(), neighbor.GetIdx())
-                        if bond is not None:
-                            highlights["bonds"].append(bond.GetIdx())
-                
+            
+                # Collect all pairs of atom indices in the functional group
+                atom_index_pairs = [
+                    (atom_indices[i], atom_indices[j]) 
+                    for i in range(len(atom_indices)) 
+                    for j in range(i+1, len(atom_indices))
+                ]
+            
+                # Highlight bonds between atoms in the functional group
+                for idx1, idx2 in atom_index_pairs:
+                    bond = mol.GetBondBetweenAtoms(idx1, idx2)
+                    if bond is not None:
+                        highlights["bonds"].append(bond.GetIdx())
+            
+                # Assign highlight colors for the atoms in the functional group
                 highlight_color = FunctionalGroupHandler.get_color_for_functional_group(fg)
                 for atom_idx in atom_indices:
                     highlight_colors[atom_idx] = highlight_color
