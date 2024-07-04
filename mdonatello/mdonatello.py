@@ -10,9 +10,10 @@ from ipywidgets import (
     HBox,
 )
 from rdkit import Chem, RDConfig
-from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures
+from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures, Lipinski
 from rdkit.Chem.Draw import rdMolDraw2D
 from IPython.display import display, clear_output
+from rdkit.Chem.Lipinski import RotatableBondSmarts
 from io import BytesIO
 import base64
 import os
@@ -155,9 +156,10 @@ class FunctionalGroupHandler:
             return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
 
 class MoleculeDrawer:
-    def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkboxes, factory):
+    def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkboxes,rotatable_bonds_checkbox, factory):
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
+        self.rotatable_bonds_checkbox = rotatable_bonds_checkbox
         self.functional_groups_checkboxes = functional_groups_checkboxes
         self.factory = factory
 
@@ -228,17 +230,35 @@ class MoleculeDrawer:
                     highlight_colors[atom_idx] = highlight_color
 
         return highlights, highlight_colors
+
+    def determine_rotatable_bonds_highlights(self):
+        mol = self.molecule
+        highlights = {"atoms": [], "bonds": []}
+        highlight_colors = {}
+
+        # Get rotatable bonds for the molecule
+        rotatable_bonds = mol.GetSubstructMatches(RotatableBondSmarts)
+
+        if self.rotatable_bonds_checkbox.value:
+            rot_atom_pairs = mol.GetSubstructMatches(RotatableBondSmarts)
+            for atom_pair in rot_atom_pairs:
+                highlights["bonds"].extend(atom_pair)
+                for atom_id in atom_pair:
+                    highlight_colors[atom_id] = (1.0, 0.1, 0.0)  # Orange for rotatable bonds
+
+        return highlights, highlight_colors
     
     def draw_molecule(self, show_atom_indices, width, height):
         mol = self.molecule
         pharmacophore_highlights, pharmacophore_highlight_colors = self.determine_pharmacophore_highlights()
         functional_group_highlights, functional_group_highlight_colors = self.determine_functional_group_highlights()
+        rotatable_bonds_highlights, rotatable_bonds_highlight_colors = self.determine_rotatable_bonds_highlights()
 
         all_highlights = {
             "atoms": pharmacophore_highlights["atoms"] + functional_group_highlights["atoms"],
-            "bonds": pharmacophore_highlights["bonds"] + functional_group_highlights["bonds"]
+            "bonds": pharmacophore_highlights["bonds"] + functional_group_highlights["bonds"] + rotatable_bonds_highlights["bonds"] 
         }
-        all_highlight_colors = {**pharmacophore_highlight_colors, **functional_group_highlight_colors}
+        all_highlight_colors = {**pharmacophore_highlight_colors, **functional_group_highlight_colors, **rotatable_bonds_highlight_colors}
 
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
         d.drawOptions().addAtomIndices = show_atom_indices
@@ -302,6 +322,9 @@ class MoleculeVisualizer:
         self.hbond_props_checkbox = Checkbox(
             value=False, description="Show H-Bond Donors/Acceptors"
         )
+        self.rotatable_bonds_checkbox = Checkbox(
+            value=False, description="Show Rotatable Bonds"
+        )
         self.functional_groups_checkbox = Checkbox(
             value=False, description="Show Functional Groups"
         )
@@ -350,6 +373,7 @@ class MoleculeVisualizer:
                     self.physiochem_props_checkbox,
                     self.hbond_props_checkbox,
                     self.functional_groups_checkbox,
+                    self.rotatable_bonds_checkbox,
                 ]
             ),
             pharmacophores_header,
@@ -373,6 +397,7 @@ class MoleculeVisualizer:
             self.update_display, names="value"
         )
         self.hbond_props_checkbox.observe(self.update_display, names="value")
+        self.rotatable_bonds_checkbox.observe(self.update_display, names="value")
         self.functional_groups_checkbox.observe(
             self.update_display, names="value"
         )
@@ -399,6 +424,7 @@ class MoleculeVisualizer:
             molecule=self.current_mol,
             pharmacophore_checkboxes=self.pharmacophore_checkboxes,
             functional_groups_checkboxes=self.functional_group_checkboxes,
+            rotatable_bonds_checkbox=self.rotatable_bonds_checkbox,
             factory=self.factory
         )
         
