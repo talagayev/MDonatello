@@ -22,6 +22,7 @@ from functools import cached_property
 
 class Property:
     name = 'property'
+    values_format = True
     
     def __init__(self, mol):
         self.mol = mol
@@ -31,10 +32,12 @@ class Property:
         raise NotImplementedError('Subclasses should implement this.')
     
     def __repr__(self):
-        return f"<p style='margin: 0; margin-left: 100px;'>Number of {self.name}: {self.property_value:.2f}</p>"
+        value = f"{self.property_value:.2f}" if self.values_format else str(self.property_value)
+        return f"<p style='margin: 0; margin-left: 100px;'>{self.name}: <b>{value}</b></p>"
 
 class MolecularWeight(Property):
     name = 'Molecular Weight'
+    values_format = True
 
     @cached_property
     def property_value(self):
@@ -42,6 +45,7 @@ class MolecularWeight(Property):
 
 class LogP(Property):
     name = 'LogP'
+    values_format = True
 
     @cached_property
     def property_value(self):
@@ -49,6 +53,7 @@ class LogP(Property):
 
 class TPSA(Property):
     name = 'TPSA'
+    values_format = True
 
     @cached_property
     def property_value(self):
@@ -56,6 +61,7 @@ class TPSA(Property):
 
 class RotatableBonds(Property):
     name = 'Rotatable Bonds'
+    values_format = False
 
     @cached_property
     def property_value(self):
@@ -63,6 +69,7 @@ class RotatableBonds(Property):
 
 class HydrogenBondAcceptors(Property):
     name = 'Hydrogen Bond Acceptors'
+    values_format = False
 
     @cached_property
     def property_value(self):
@@ -70,6 +77,7 @@ class HydrogenBondAcceptors(Property):
 
 class HydrogenBondDonors(Property):
     name = 'Hydrogen Bond Donors'
+    values_format = False
 
     @cached_property
     def property_value(self):
