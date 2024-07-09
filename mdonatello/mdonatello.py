@@ -32,8 +32,13 @@ class Property:
         raise NotImplementedError('Subclasses should implement this.')
     
     def __repr__(self):
-        value = f"{self.property_value:.2f}" if self.values_format else str(self.property_value)
+        value = (
+            f"{self.property_value:.2f}"
+            if self.values_format
+            else str(self.property_value)
+        )
         return f"<p style='margin: 0; margin-left: 100px;'>{self.name}: <b>{value}</b></p>"
+
 
 class MolecularWeight(Property):
     name = 'Molecular Weight'
@@ -43,6 +48,7 @@ class MolecularWeight(Property):
     def property_value(self):
         return Descriptors.MolWt(self.mol)
 
+
 class LogP(Property):
     name = 'LogP'
     values_format = True
@@ -50,6 +56,7 @@ class LogP(Property):
     @cached_property
     def property_value(self):
         return Descriptors.MolLogP(self.mol)
+
 
 class TPSA(Property):
     name = 'TPSA'
@@ -59,6 +66,7 @@ class TPSA(Property):
     def property_value(self):
         return Descriptors.TPSA(self.mol)
 
+
 class RotatableBonds(Property):
     name = 'Rotatable Bonds'
     values_format = False
@@ -66,6 +74,7 @@ class RotatableBonds(Property):
     @cached_property
     def property_value(self):
         return Descriptors.NumRotatableBonds(self.mol)
+
 
 class HydrogenBondAcceptors(Property):
     name = 'Hydrogen Bond Acceptors'
@@ -75,6 +84,7 @@ class HydrogenBondAcceptors(Property):
     def property_value(self):
         return Descriptors.NumHAcceptors(self.mol)
 
+
 class HydrogenBondDonors(Property):
     name = 'Hydrogen Bond Donors'
     values_format = False
@@ -82,6 +92,7 @@ class HydrogenBondDonors(Property):
     @cached_property
     def property_value(self):
         return Descriptors.NumHDonors(self.mol)
+
 
 class PharmacophoreColorMapper:
     @staticmethod
@@ -95,7 +106,10 @@ class PharmacophoreColorMapper:
             "Aromatic": (0.5, 0.5, 1.0),  # Light Blue
             "LumpedHydrophobe": (1.0, 0.5, 0.0),  # Orange
         }
-        return color_map.get(family, (0.5, 0.5, 0.5))  # Default to grey if not specified
+        return color_map.get(
+            family, (0.5, 0.5, 0.5)
+        )  # Default to grey if not specified
+
 
 class FunctionalGroupHandler:
     @staticmethod
@@ -163,12 +177,24 @@ class FunctionalGroupHandler:
         else:
             return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
 
+
 class MoleculeDrawer:
-    def __init__(self, molecule, pharmacophore_checkboxes, functional_groups_checkboxes,rotatable_bonds_checkbox, factory):
+    def __init__(
+        self,
+        molecule,
+        pharmacophore_checkboxes,
+        functional_groups_checkboxes,
+        rotatable_bonds_checkbox,
+        partial_charges_checkbox,
+        partial_charges_heatmap_checkbox,
+        factory,
+    ):
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
         self.rotatable_bonds_checkbox = rotatable_bonds_checkbox
         self.functional_groups_checkboxes = functional_groups_checkboxes
+        self.partial_charges_checkbox = partial_charges_checkbox
+        self.partial_charges_heatmap_checkbox = partial_charges_heatmap_checkbox
         self.factory = factory
 
     def determine_pharmacophore_highlights(self):
@@ -185,20 +211,28 @@ class MoleculeDrawer:
             if self.pharmacophore_checkboxes[family].value:
                 atom_ids = feat.GetAtomIds()
                 highlights["atoms"].extend(atom_ids)
-                color = PharmacophoreColorMapper.get_color_for_pharmacophore(family)
+                color = PharmacophoreColorMapper.get_color_for_pharmacophore(
+                    family
+                )
                 for atom_id in atom_ids:
                     highlight_colors[atom_id] = color
 
         # Specific highlighting for Aromatic pharmacophore
         if self.pharmacophore_checkboxes["Aromatic"].value:
-            hit_ats = [atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()]
+            hit_ats = [
+                atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()
+            ]
             hit_bonds = [
-                bond.GetIdx() for bond in mol.GetBonds()
-                if bond.GetBeginAtom().GetIsAromatic() and bond.GetEndAtom().GetIsAromatic()
+                bond.GetIdx()
+                for bond in mol.GetBonds()
+                if bond.GetBeginAtom().GetIsAromatic()
+                and bond.GetEndAtom().GetIsAromatic()
             ]
             highlights["atoms"].extend(hit_ats)
             highlights["bonds"].extend(hit_bonds)
-            color = PharmacophoreColorMapper.get_color_for_pharmacophore("Aromatic")
+            color = PharmacophoreColorMapper.get_color_for_pharmacophore(
+                "Aromatic"
+            )
             for atom_id in hit_ats:
                 highlight_colors[atom_id] = color
             for bond_id in hit_bonds:
@@ -233,7 +267,9 @@ class MoleculeDrawer:
                         highlights["bonds"].append(bond.GetIdx())
             
                 # Assign highlight colors for the atoms in the functional group
-                highlight_color = FunctionalGroupHandler.get_color_for_functional_group(fg)
+                highlight_color = (
+                    FunctionalGroupHandler.get_color_for_functional_group(fg)
+                )
                 for atom_idx in atom_indices:
                     highlight_colors[atom_idx] = highlight_color
 
@@ -244,31 +280,92 @@ class MoleculeDrawer:
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
-        # Get rotatable bonds for the molecule
-        rotatable_bonds = mol.GetSubstructMatches(RotatableBondSmarts)
-
         if self.rotatable_bonds_checkbox.value:
             rot_atom_pairs = mol.GetSubstructMatches(RotatableBondSmarts)
             for atom_pair in rot_atom_pairs:
                 highlights["bonds"].extend(atom_pair)
                 for atom_id in atom_pair:
-                    highlight_colors[atom_id] = (1.0, 0.1, 0.0)  # Orange for rotatable bonds
+                    highlight_colors[atom_id] = (
+                        1.0,
+                        0.6,
+                        0.2,
+                    )  # Orange for rotatable bonds
 
         return highlights, highlight_colors
+
+    def determine_partial_charge_colors(self):
+        partial_charges_highlights = {"atoms": [], "bonds": []}
+        partial_charges_highlight_colors = {}
+
+        if self.partial_charges_heatmap_checkbox.value:
+            AllChem.ComputeGasteigerCharges(self.molecule)
+
+            for atom in self.molecule.GetAtoms():
+                atom_idx = atom.GetIdx()
+                partial_charge = atom.GetProp("_GasteigerCharge")
+                partial_charge = float(partial_charge)
+
+                scaled_charge = (
+                    partial_charge + 1.0
+                ) / 2.0  # Adjusting range to 0.0 to 1.0
+                red_component = 0.5 + 0.5 * scaled_charge
+                blue_component = 1.0 - 0.5 * scaled_charge
+                green_component = 0.5 + 0.5 * (1 - scaled_charge)
+
+                color = (
+                    red_component,
+                    green_component,
+                    blue_component,
+                )  # Blue to Red spectrum
+
+                partial_charges_highlight_colors[atom_idx] = color
+                partial_charges_highlights["atoms"].append(atom_idx)
+
+        return partial_charges_highlights, partial_charges_highlight_colors
     
     def draw_molecule(self, show_atom_indices, width, height):
         mol = self.molecule
-        pharmacophore_highlights, pharmacophore_highlight_colors = self.determine_pharmacophore_highlights()
-        functional_group_highlights, functional_group_highlight_colors = self.determine_functional_group_highlights()
-        rotatable_bonds_highlights, rotatable_bonds_highlight_colors = self.determine_rotatable_bonds_highlights()
+        
+        pharmacophore_highlights, pharmacophore_highlight_colors = (
+            self.determine_pharmacophore_highlights()
+        )
+        functional_group_highlights, functional_group_highlight_colors = (
+            self.determine_functional_group_highlights()
+        )
+        rotatable_bonds_highlights, rotatable_bonds_highlight_colors = (
+            self.determine_rotatable_bonds_highlights()
+        )
+        partial_charges_highlights, partial_charges_highlight_colors = (
+            self.determine_partial_charge_colors()
+        )
 
         all_highlights = {
-            "atoms": pharmacophore_highlights["atoms"] + functional_group_highlights["atoms"],
-            "bonds": pharmacophore_highlights["bonds"] + functional_group_highlights["bonds"] + rotatable_bonds_highlights["bonds"] 
+            "atoms": pharmacophore_highlights["atoms"]
+            + functional_group_highlights["atoms"]
+            + partial_charges_highlights["atoms"],
+            "bonds": pharmacophore_highlights["bonds"]
+            + functional_group_highlights["bonds"]
+            + rotatable_bonds_highlights["bonds"],
         }
-        all_highlight_colors = {**pharmacophore_highlight_colors, **functional_group_highlight_colors, **rotatable_bonds_highlight_colors}
+        all_highlight_colors = {
+            **pharmacophore_highlight_colors,
+            **functional_group_highlight_colors,
+            **rotatable_bonds_highlight_colors,
+            **partial_charges_highlight_colors,
+        }
 
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
+        draw_options = d.drawOptions()
+
+        if self.partial_charges_checkbox.value:
+            AllChem.ComputeGasteigerCharges(self.molecule)
+            for atom in self.molecule.GetAtoms():
+                atom_idx = atom.GetIdx()
+                partial_charge = atom.GetProp("_GasteigerCharge")
+                draw_options.atomLabels[atom_idx] = (
+                    f"{float(partial_charge):.2f}"
+                )
+
         d.drawOptions().addAtomIndices = show_atom_indices
         d.drawOptions().addStereoAnnotation = True
         rdMolDraw2D.PrepareAndDrawMolecule(
@@ -282,6 +379,7 @@ class MoleculeDrawer:
         d.FinishDrawing()
         svg = d.GetDrawingText()
         return svg
+
 
 class MoleculeVisualizer:
     """A class for small molecule 2D visualization in jupyter notebook
@@ -299,14 +397,22 @@ class MoleculeVisualizer:
         
     """
    
-    def __init__(self, ag: mda.core.groups.AtomGroup, show_atom_indices: bool = False, width: int = -1, height: int = -1):
+    def __init__(
+        self,
+        ag: mda.core.groups.AtomGroup,
+        show_atom_indices: bool = False,
+        width: int = -1,
+        height: int = -1,
+    ):
         self.mol: Chem.Mol = ag.convert_to("RDKit")
         self.mol_noh: Chem.Mol = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
 
         # Get individual fragments
         fragments: list[Chem.Mol] = Chem.GetMolFrags(self.mol_noh, asMols=True)
-        self.molecule_list: list[str] = [Chem.MolToSmiles(frag) for frag in fragments]
+        self.molecule_list: list[str] = [
+            Chem.MolToSmiles(frag) for frag in fragments
+        ]
         self.fragments: dict[str, Chem.Mol] = {
             smiles: frag for smiles, frag in zip(self.molecule_list, fragments)
         }
@@ -323,6 +429,12 @@ class MoleculeVisualizer:
         )
         self.show_atom_indices_checkbox = Checkbox(
             value=show_atom_indices, description="Show atom indices"
+        )
+        self.partial_charges_checkbox = Checkbox(
+            value=False, description="Show partial charges"
+        )
+        self.partial_charges_heatmap_checkbox = Checkbox(
+            value=False, description="Show partial charge heatmap"
         )
         self.physiochem_props_checkbox = Checkbox(
             value=False, description="Show Physiochemical Properties"
@@ -370,22 +482,36 @@ class MoleculeVisualizer:
             pharmacophore_checkbox_rows.append(HBox(row))
         
         properties_header = HTML("<h3>Properties</h3>")
+        highlighting_header = HTML("<h3>Atom & Bond Highlighting</h3>")
         pharmacophores_header = HTML("<h3>Pharmacophores</h3>")
+        molecule_header = HTML("<h3>Molecule</h3>")
         
         self.output_dropdown = VBox()
-        self.output_dropdown.children = [
-            HBox([self.dropdown, self.show_atom_indices_checkbox]),
-            properties_header,
-            HBox(
-                [
-                    self.physiochem_props_checkbox,
-                    self.hbond_props_checkbox,
-                    self.functional_groups_checkbox,
-                    self.rotatable_bonds_checkbox,
-                ]
-            ),
-            pharmacophores_header,
-        ] + pharmacophore_checkbox_rows
+        self.output_dropdown.children = (
+            [
+                HBox([self.dropdown]),
+                properties_header,
+                HBox(
+                    [
+                        self.physiochem_props_checkbox,
+                        self.partial_charges_checkbox,
+                        self.hbond_props_checkbox,
+                        self.show_atom_indices_checkbox,
+                    ]
+                ),
+                highlighting_header,
+                HBox(
+                    [
+                        self.rotatable_bonds_checkbox,
+                        self.partial_charges_heatmap_checkbox,
+                        self.functional_groups_checkbox,
+                    ]
+                ),
+                pharmacophores_header,
+            ]
+            + pharmacophore_checkbox_rows
+            + [molecule_header]
+        )
         
         self.output_molecule = VBox()
         self.output = VBox()
@@ -397,27 +523,43 @@ class MoleculeVisualizer:
         self.update_display()
         
         # Link widgets to display update
-        self.dropdown.observe(self.update_display, names="value")
+        self.dropdown.observe(
+            self.update_display, names="value"
+        )
         self.show_atom_indices_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.partial_charges_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.partial_charges_heatmap_checkbox.observe(
             self.update_display, names="value"
         )
         self.physiochem_props_checkbox.observe(
             self.update_display, names="value"
         )
-        self.hbond_props_checkbox.observe(self.update_display, names="value")
-        self.rotatable_bonds_checkbox.observe(self.update_display, names="value")
+        self.hbond_props_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.rotatable_bonds_checkbox.observe(
+            self.update_display, names="value"
+        )
         self.functional_groups_checkbox.observe(
             self.update_display, names="value"
         )
         for checkbox in self.pharmacophore_checkboxes.values():
-            checkbox.observe(self.update_display, names="value")
+            checkbox.observe(
+                self.update_display, names="value"
+            )
         
     def update_display(self, _=None):
         smiles = self.dropdown.value
         self.current_mol = self.fragments[smiles]
 
         # Update functional group checkboxes dynamically
-        fg_counts = FunctionalGroupHandler.calculate_functional_groups(self.current_mol)
+        fg_counts = FunctionalGroupHandler.calculate_functional_groups(
+            self.current_mol
+        )
         self.functional_group_checkboxes = {}
         for fg, atom_indices in fg_counts.items():
             if atom_indices:
@@ -426,13 +568,17 @@ class MoleculeVisualizer:
                     checkbox = Checkbox(value=False, description=fg)
                     setattr(self, fg_checkbox_name, checkbox)
                     checkbox.observe(self.update_display, names="value")
-                self.functional_group_checkboxes[fg] = getattr(self, fg_checkbox_name)
+                self.functional_group_checkboxes[fg] = getattr(
+                    self, fg_checkbox_name
+                )
 
         drawer = MoleculeDrawer(
             molecule=self.current_mol,
             pharmacophore_checkboxes=self.pharmacophore_checkboxes,
             functional_groups_checkboxes=self.functional_group_checkboxes,
             rotatable_bonds_checkbox=self.rotatable_bonds_checkbox,
+            partial_charges_checkbox=self.partial_charges_checkbox,
+            partial_charges_heatmap_checkbox=self.partial_charges_heatmap_checkbox,
             factory=self.factory
         )
         
@@ -454,7 +600,9 @@ class MoleculeVisualizer:
                 TPSA(self.current_mol),
                 RotatableBonds(self.current_mol)
             ]
-            physiochem_html = [HTML(repr(prop)) for prop in physiochem_properties]
+            physiochem_html = [
+                HTML(repr(prop)) for prop in physiochem_properties
+            ]
             children.extend(physiochem_html)
             
         if self.hbond_props_checkbox.value:
@@ -462,7 +610,9 @@ class MoleculeVisualizer:
                 HydrogenBondAcceptors(self.current_mol),
                 HydrogenBondDonors(self.current_mol),
             ]
-            hbond_html = [HTML(repr(prop)) for prop in hbond_properties]
+            hbond_html = [
+                HTML(repr(prop)) for prop in hbond_properties
+            ]
             children.extend(hbond_html)
 
         # Show or hide functional group checkboxes based on the main functional groups checkbox
