@@ -10,8 +10,18 @@ from ipywidgets import (
     HBox,
 )
 from rdkit import Chem, RDConfig
-from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures, Lipinski
+from rdkit.Chem import (
+    Draw,
+    AllChem,
+    Descriptors,
+    ChemicalFeatures,
+    Lipinski,
+    rdMolDescriptors,
+    Scaffolds,
+)
+from rdkit.Chem.Scaffolds import MurckoScaffold
 from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem.rdMolDescriptors import CalcNumAtomStereoCenters
 from IPython.display import display, clear_output
 from rdkit.Chem.Lipinski import RotatableBondSmarts
 from io import BytesIO
@@ -82,7 +92,7 @@ class HydrogenBondAcceptors(Property):
 
     @cached_property
     def property_value(self):
-        return Descriptors.NumHAcceptors(self.mol)
+        return Lipinski.NumHAcceptors(self.mol)
 
 
 class HydrogenBondDonors(Property):
@@ -91,7 +101,17 @@ class HydrogenBondDonors(Property):
 
     @cached_property
     def property_value(self):
-        return Descriptors.NumHDonors(self.mol)
+        return Lipinski.NumHDonors(self.mol)
+
+
+class Stereocenters(Property):
+    name = "Stereocenters"
+    values_format = False
+
+    @cached_property
+    def property_value(self):
+        # Using the provided mol directly assuming it's an RDKit molecule object
+        return len(Chem.FindMolChiralCenters(self.mol))
 
 
 class PharmacophoreColorMapper:
@@ -187,6 +207,8 @@ class MoleculeDrawer:
         rotatable_bonds_checkbox,
         partial_charges_checkbox,
         partial_charges_heatmap_checkbox,
+        stereocenters_checkbox,
+        murcko_scaffold_checkbox,
         factory,
     ):
         self.molecule = molecule
@@ -195,6 +217,8 @@ class MoleculeDrawer:
         self.functional_groups_checkboxes = functional_groups_checkboxes
         self.partial_charges_checkbox = partial_charges_checkbox
         self.partial_charges_heatmap_checkbox = partial_charges_heatmap_checkbox
+        self.stereocenters_checkbox = stereocenters_checkbox
+        self.murcko_scaffold_checkbox = murcko_scaffold_checkbox
         self.factory = factory
 
     def determine_pharmacophore_highlights(self):
@@ -283,13 +307,15 @@ class MoleculeDrawer:
         if self.rotatable_bonds_checkbox.value:
             rot_atom_pairs = mol.GetSubstructMatches(RotatableBondSmarts)
             for atom_pair in rot_atom_pairs:
-                highlights["bonds"].extend(atom_pair)
-                for atom_id in atom_pair:
-                    highlight_colors[atom_id] = (
-                        1.0,
-                        0.6,
-                        0.2,
-                    )  # Orange for rotatable bonds
+                bond = mol.GetBondBetweenAtoms(*atom_pair)
+                if bond is not None:
+                    highlights["bonds"].append(bond.GetIdx())
+                    for atom_id in atom_pair:
+                        highlight_colors[atom_id] = (
+                            1.0,
+                            0.6,
+                            0.2,
+                        )  # Orange for rotatable bonds
 
         return highlights, highlight_colors
 
@@ -323,6 +349,64 @@ class MoleculeDrawer:
 
         return partial_charges_highlights, partial_charges_highlight_colors
     
+    def determine_stereocenter_highlights(self):
+        mol = self.molecule
+        highlights = {"atoms": [], "bonds": []}
+        highlight_colors = {}
+
+        if self.stereocenters_checkbox.value:
+            chiral_centers = Chem.FindMolChiralCenters(
+                self.molecule, includeUnassigned=True
+            )
+            for chiral_atom in chiral_centers:
+                atom_idx = chiral_atom[0]
+                chirality = chiral_atom[1]
+                highlights["atoms"].append(atom_idx)
+                if chirality == "S":
+                    highlight_colors[atom_idx] = (
+                        1.0,
+                        0.0,
+                        1.0,
+                    )  # Magenta for S stereocenters
+                elif chirality == "R":
+                    highlight_colors[atom_idx] = (
+                        0.25,
+                        0.88,
+                        0.82,
+                    )  # Red for R stereocenters
+                else:
+                    highlight_colors[atom_idx] = (
+                        0.5,
+                        0.5,
+                        0.5,
+                    )  # Grey for unassigned stereocenters
+
+        return highlights, highlight_colors
+
+    def determine_murcko_scaffold_highlights(self):
+        mol = self.molecule
+        highlights = {"atoms": [], "bonds": []}
+        highlight_colors = {}
+
+        if self.murcko_scaffold_checkbox.value:
+            scaffold = MurckoScaffold.GetScaffoldForMol(mol)
+            scaffold_atoms = scaffold.GetAtoms()
+            scaffold_atom_indices = [atom.GetIdx() for atom in scaffold_atoms]
+            scaffold_bonds = scaffold.GetBonds()
+            scaffold_bond_indices = [bond.GetIdx() for bond in scaffold_bonds]
+
+            highlights["atoms"].extend(scaffold_atom_indices)
+            highlights["bonds"].extend(scaffold_bond_indices)
+
+            # Color for scaffold atoms and bonds
+            scaffold_color = (1, 0.8, 0.8)  # Light lila for scaffold
+            for atom_idx in scaffold_atom_indices:
+                highlight_colors[atom_idx] = scaffold_color
+            for bond_idx in scaffold_bond_indices:
+                highlight_colors[bond_idx] = scaffold_color
+
+        return highlights, highlight_colors
+    
     def draw_molecule(self, show_atom_indices, width, height):
         mol = self.molecule
         
@@ -338,20 +422,31 @@ class MoleculeDrawer:
         partial_charges_highlights, partial_charges_highlight_colors = (
             self.determine_partial_charge_colors()
         )
-
+        stereocenters_highlights, stereocenters_highlight_colors = (
+            self.determine_stereocenter_highlights()
+        )
+        murcko_scaffold_highlights, murcko_scaffold_highlight_colors = (
+            self.determine_murcko_scaffold_highlights()
+        )
+        
         all_highlights = {
             "atoms": pharmacophore_highlights["atoms"]
             + functional_group_highlights["atoms"]
-            + partial_charges_highlights["atoms"],
+            + partial_charges_highlights["atoms"]
+            + murcko_scaffold_highlights["atoms"]
+            + stereocenters_highlights["atoms"],
             "bonds": pharmacophore_highlights["bonds"]
             + functional_group_highlights["bonds"]
-            + rotatable_bonds_highlights["bonds"],
+            + rotatable_bonds_highlights["bonds"]
+            + murcko_scaffold_highlights["bonds"],
         }
         all_highlight_colors = {
             **pharmacophore_highlight_colors,
             **functional_group_highlight_colors,
             **rotatable_bonds_highlight_colors,
             **partial_charges_highlight_colors,
+            **stereocenters_highlight_colors,
+            **murcko_scaffold_highlight_colors,
         }
 
         d = rdMolDraw2D.MolDraw2DSVG(width, height)
@@ -436,6 +531,12 @@ class MoleculeVisualizer:
         self.partial_charges_heatmap_checkbox = Checkbox(
             value=False, description="Show partial charge heatmap"
         )
+        self.stereocenters_checkbox = Checkbox(
+            value=False, description="Show Stereocenters"
+        )
+        self.murcko_scaffold_checkbox = Checkbox(
+            value=False, description="Show Murcko Scaffold"
+        )
         self.physiochem_props_checkbox = Checkbox(
             value=False, description="Show Physiochemical Properties"
         )
@@ -505,6 +606,12 @@ class MoleculeVisualizer:
                         self.rotatable_bonds_checkbox,
                         self.partial_charges_heatmap_checkbox,
                         self.functional_groups_checkbox,
+                        self.stereocenters_checkbox,
+                    ]
+                ),
+                HBox(
+                    [
+                        self.murcko_scaffold_checkbox,
                     ]
                 ),
                 pharmacophores_header,
@@ -533,6 +640,12 @@ class MoleculeVisualizer:
             self.update_display, names="value"
         )
         self.partial_charges_heatmap_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.stereocenters_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.murcko_scaffold_checkbox.observe(
             self.update_display, names="value"
         )
         self.physiochem_props_checkbox.observe(
@@ -579,6 +692,8 @@ class MoleculeVisualizer:
             rotatable_bonds_checkbox=self.rotatable_bonds_checkbox,
             partial_charges_checkbox=self.partial_charges_checkbox,
             partial_charges_heatmap_checkbox=self.partial_charges_heatmap_checkbox,
+            stereocenters_checkbox=self.stereocenters_checkbox,
+            murcko_scaffold_checkbox=self.murcko_scaffold_checkbox,
             factory=self.factory
         )
         
@@ -598,7 +713,8 @@ class MoleculeVisualizer:
                 MolecularWeight(self.current_mol),
                 LogP(self.current_mol),
                 TPSA(self.current_mol),
-                RotatableBonds(self.current_mol)
+                RotatableBonds(self.current_mol),
+                Stereocenters(self.current_mol),
             ]
             physiochem_html = [
                 HTML(repr(prop)) for prop in physiochem_properties
