@@ -13,17 +13,9 @@ from rdkit import Chem, RDConfig
 from rdkit.Chem import (
     Draw,
     AllChem,
-    Descriptors,
     ChemicalFeatures,
-    Lipinski,
-    rdMolDescriptors,
-    Scaffolds,
 )
-from rdkit.Chem.Scaffolds import MurckoScaffold
-from rdkit.Chem.Draw import rdMolDraw2D
-from rdkit.Chem.rdMolDescriptors import CalcNumAtomStereoCenters
 from IPython.display import display, clear_output
-from rdkit.Chem.Lipinski import RotatableBondSmarts
 from io import BytesIO
 import base64
 import os
@@ -41,7 +33,6 @@ from mdonatello.properties import (
 )
 
 
-
 class MoleculeVisualizer:
     """A class for small molecule 2D visualization in jupyter notebook
 
@@ -52,12 +43,12 @@ class MoleculeVisualizer:
     show_atom_indices : bool, optional
         Whether to display atom indices of the molecule. Default is False.
     width : int, optional
-        The width of the image in pixels. Default is 300.
+        The width of the image in pixels. Default is -1.
     height : int, optional
-        The height of the image in pixels. Default is 300. 
-        
+        The height of the image in pixels. Default is -1.
+
     """
-   
+
     def __init__(
         self,
         ag: mda.core.groups.AtomGroup,
@@ -65,6 +56,13 @@ class MoleculeVisualizer:
         width: int = -1,
         height: int = -1,
     ):
+        """
+        Initializes the MoleculeVisualizer with an AtomGroup and visualization options.
+        """
+        self.width = width
+        self.height = height
+        self.show_atom_indices = show_atom_indices
+
         self.mol: Chem.Mol = ag.convert_to("RDKit")
         self.mol_noh: Chem.Mol = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
@@ -78,18 +76,26 @@ class MoleculeVisualizer:
             smiles: frag for smiles, frag in zip(self.molecule_list, fragments)
         }
 
-        # Add height and width
-        self.width: int = width
-        self.height: int = height
-        
-        # Create the dropdown and other widgets
+        self.fdefName = os.path.join(RDConfig.RDDataDir, "BaseFeatures.fdef")
+        self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
+
+        self.initialize_widgets()
+        self.initialize_output()
+        self.link_widget_callbacks()
+
+        self.update_display()
+
+    def initialize_widgets(self):
+        """
+        Initializes the interactive widgets for molecule visualization.
+        """
         self.dropdown = Dropdown(
             options=self.molecule_list,
             description="Select molecule:",
-            layout=Layout(width="50%")
+            layout=Layout(width="50%"),
         )
         self.show_atom_indices_checkbox = Checkbox(
-            value=show_atom_indices, description="Show atom indices"
+            value=self.show_atom_indices, description="Show atom indices"
         )
         self.partial_charges_checkbox = Checkbox(
             value=False, description="Show partial charges"
@@ -117,12 +123,6 @@ class MoleculeVisualizer:
         )
         self.save_button = Button(description="Save as PNG")
 
-        # Pharmacophore feature detection
-        self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
-        self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
-        self.pharmacophore_checkboxes = {}
-
-        # Define all possible pharmacophore features
         pharmacophore_families = [
             "Donor",
             "Acceptor",
@@ -133,26 +133,26 @@ class MoleculeVisualizer:
             "LumpedHydrophobe",
         ]
 
-        for family in pharmacophore_families:
-            self.pharmacophore_checkboxes[family] = Checkbox(
-                value=False, description=f"Highlight {family}"
-            )
-        
-        # Save button click event
-        self.save_button.on_click(self.save_selected_molecule)
-        
-        # Display widgets
-        pharmacophore_checkbox_rows = []
-        checkboxes = list(self.pharmacophore_checkboxes.values())
-        for i in range(0, len(checkboxes), 4):
-            row = checkboxes[i:i+4]
-            pharmacophore_checkbox_rows.append(HBox(row))
-        
+        self.pharmacophore_checkboxes = {
+            family: Checkbox(value=False, description=f"Highlight {family}")
+            for family in pharmacophore_families
+        }
+
+    def initialize_output(self):
+        """
+        Initializes the output display and arranges the widgets in the interface.
+        """
         properties_header = HTML("<h3>Properties</h3>")
         highlighting_header = HTML("<h3>Atom & Bond Highlighting</h3>")
         pharmacophores_header = HTML("<h3>Pharmacophores</h3>")
         molecule_header = HTML("<h3>Molecule</h3>")
-        
+
+        pharmacophore_checkbox_rows = []
+        checkboxes = list(self.pharmacophore_checkboxes.values())
+        for i in range(0, len(checkboxes), 4):
+            row = checkboxes[i : i + 4]
+            pharmacophore_checkbox_rows.append(HBox(row))
+
         self.output_dropdown = VBox()
         self.output_dropdown.children = (
             [
@@ -185,20 +185,18 @@ class MoleculeVisualizer:
             + pharmacophore_checkbox_rows
             + [molecule_header]
         )
-        
+
         self.output_molecule = VBox()
         self.output = VBox()
         self.output.children = [self.output_molecule, self.save_button]
-        
+
         display(self.output_dropdown, self.output)
-        
-        # Update display when dropdown value changes
-        self.update_display()
-        
-        # Link widgets to display update
-        self.dropdown.observe(
-            self.update_display, names="value"
-        )
+
+    def link_widget_callbacks(self):
+        """
+        Links the interactive widgets to the update_display method to reflect changes.
+        """
+        self.dropdown.observe(self.update_display, names="value")
         self.show_atom_indices_checkbox.observe(
             self.update_display, names="value"
         )
@@ -208,18 +206,14 @@ class MoleculeVisualizer:
         self.partial_charges_heatmap_checkbox.observe(
             self.update_display, names="value"
         )
-        self.stereocenters_checkbox.observe(
-            self.update_display, names="value"
-        )
+        self.stereocenters_checkbox.observe(self.update_display, names="value")
         self.murcko_scaffold_checkbox.observe(
             self.update_display, names="value"
         )
         self.physiochem_props_checkbox.observe(
             self.update_display, names="value"
         )
-        self.hbond_props_checkbox.observe(
-            self.update_display, names="value"
-        )
+        self.hbond_props_checkbox.observe(self.update_display, names="value")
         self.rotatable_bonds_checkbox.observe(
             self.update_display, names="value"
         )
@@ -227,11 +221,18 @@ class MoleculeVisualizer:
             self.update_display, names="value"
         )
         for checkbox in self.pharmacophore_checkboxes.values():
-            checkbox.observe(
-                self.update_display, names="value"
-            )
-        
+            checkbox.observe(self.update_display, names="value")
+        self.save_button.on_click(self.save_selected_molecule)
+
     def update_display(self, _=None):
+        """
+        Updates the molecule display based on the current selections.
+
+        Parameters
+        ----------
+        _ : any, optional
+            A placeholder parameter for widget callback compatibility.
+        """
         smiles = self.dropdown.value
         self.current_mol = self.fragments[smiles]
 
@@ -260,9 +261,9 @@ class MoleculeVisualizer:
             partial_charges_heatmap_checkbox=self.partial_charges_heatmap_checkbox,
             stereocenters_checkbox=self.stereocenters_checkbox,
             murcko_scaffold_checkbox=self.murcko_scaffold_checkbox,
-            factory=self.factory
+            factory=self.factory,
         )
-        
+
         children = [
             HTML(
                 drawer.draw_molecule(
@@ -273,7 +274,7 @@ class MoleculeVisualizer:
             ),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>"),
         ]
-        
+
         if self.physiochem_props_checkbox.value:
             physiochem_properties = [
                 MolecularWeight(self.current_mol),
@@ -282,9 +283,11 @@ class MoleculeVisualizer:
                 RotatableBonds(self.current_mol),
                 Stereocenters(self.current_mol),
             ]
-            physiochem_html = [HTML(str(prop)) for prop in physiochem_properties]
+            physiochem_html = [
+                HTML(str(prop)) for prop in physiochem_properties
+            ]
             children.extend(physiochem_html)
-            
+
         if self.hbond_props_checkbox.value:
             hbond_properties = [
                 HydrogenBondAcceptors(self.current_mol),
@@ -303,8 +306,16 @@ class MoleculeVisualizer:
                 children.append(fg_hbox)
 
         self.output_molecule.children = children
-        
+
     def save_selected_molecule(self, _):
+        """
+        Saves the currently selected molecule as a PNG file.
+
+        Parameters
+        ----------
+        _ : any, optional
+            A placeholder parameter for button callback compatibility.
+        """
         smiles = self.dropdown.value
         mol = self.fragments[smiles]
         filename = f"{smiles}.png"
