@@ -40,7 +40,7 @@ jobs:
       - name: Install pytest and run tests
         run: |
           pip install pytest pytest-cov
-          pytest -vv --cov=mdonatello mdonatello ${{ env.CODECOV_ATS_TESTS }}
+          pytest -vv --cov=mdonatello --cov-report=xml --cov-report=html --color=yes mdonatello/tests/
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v4.0.1
