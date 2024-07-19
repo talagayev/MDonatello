@@ -28,7 +28,7 @@ from io import BytesIO
 import base64
 import os
 from functools import cached_property
-from mdonatello.colormapper import FunctionalGroupHandler
+from mdonatello.mapper import FunctionalGroupHandler
 from mdonatello.drawer import MoleculeDrawer
 from mdonatello.properties import (
     MolecularWeight,
