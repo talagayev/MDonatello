@@ -11,6 +11,7 @@ Welcome to MDonatello's documentation!
    :caption: Contents:
 
    getting_started
+   display
    api
 
 
