@@ -1,93 +1,68 @@
-"""
-Unit and regression test for the mdonatello package.
-"""
-
-# Import package, test suite, and other packages as needed
-import mdonatello
-from mdonatello import MoleculeVisualizer, MolecularWeight, LogP, TPSA, RotatableBonds, HydrogenBondAcceptors, HydrogenBondDonors
 import pytest
-import sys
-from ipywidgets import VBox, HTML, Dropdown, Checkbox, Button
+import MDAnalysis as mda
 from rdkit import Chem
-from rdkit.Chem import AllChem, Descriptors
-from MDAnalysis import Universe
-
-# Dummy data for testing
-mol = Chem.MolFromSmiles("CCO")
-AllChem.Compute2DCoords(mol)
+from ipywidgets import HTML
+from mdonatello import MoleculeVisualizer
+import os
 
 @pytest.fixture
-def molecule_benzene():
-    smiles = 'c1ccccc1'
-    return Chem.MolFromSmiles(smiles)
+def ligand_atoms():
+    """Creates an MDAnalysis AtomGroup for the residue name UNK from input.pdb."""
+    u = mda.Universe("mdonatello/tests/test_files/input.pdb")
+    ag = u.select_atoms("resname UNK")
+    return ag
 
-def test_molecular_weight(molecule_benzene):
-    mw = MolecularWeight(molecule_benzene)
-    assert mw.property_value == Descriptors.MolWt(molecule_benzene)
-    assert repr(mw) == f"<p style='margin: 0; margin-left: 100px;'>Molecular Weight: <b>{Descriptors.MolWt(benzene):.2f}</b></p>"
+def test_initialization(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    assert visualizer.mol is not None
+    assert visualizer.mol_noh is not None
+    assert isinstance(visualizer.molecule_list, list)
+    assert isinstance(visualizer.fragments, dict)
 
-def test_logp(molecule_benzene):
-    logp = LogP(molecule_benzene)
-    assert logp.property_value == Descriptors.MolLogP(molecule_benzene)
-    assert repr(logp) == f"<p style='margin: 0; margin-left: 100px;'>LogP: <b>{Descriptors.MolLogP(molecule_benzene):.2f}</b></p>"
+def test_widget_initialization(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    assert visualizer.dropdown is not None
+    assert visualizer.show_atom_indices_checkbox is not None
+    assert visualizer.partial_charges_checkbox is not None
+    assert visualizer.save_button is not None
 
-def test_tpsa(molecule_benzene):
-    tpsa = TPSA(molecule_benzene)
-    assert tpsa.property_value == Descriptors.TPSA(molecule_benzene)
-    assert repr(tpsa) == f"<p style='margin: 0; margin-left: 100px;'>TPSA: <b>{Descriptors.TPSA(molecule_benzene):.2f}</b></p>"
+def test_display_update(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    visualizer.update_display()
+    assert visualizer.current_mol is not None
+    assert visualizer.output_molecule.children != []
 
-def test_rotatable_bonds(molecule_benzene):
-    rb = RotatableBonds(molecule_benzene)
-    assert rb.property_value == Descriptors.NumRotatableBonds(molecule_benzene)
-    assert repr(rb) == f"<p style='margin: 0; margin-left: 100px;'>Rotatable Bonds: <b>{Descriptors.NumRotatableBonds(molecule_benzene)}</b></p>"
+def test_save_molecule(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    visualizer.dropdown.value = visualizer.molecule_list[0]
+    visualizer.save_selected_molecule(None)
+    smiles = visualizer.dropdown.value
+    filename = f"{smiles}.png"
+    assert os.path.isfile(filename)
+    os.remove(filename)
 
-def test_hydrogen_bond_acceptors(molecule_benzene):
-    hba = HydrogenBondAcceptors(molecule_benzene)
-    assert hba.property_value == Descriptors.NumHAcceptors(molecule_benzene)
-    assert repr(hba) == f"<p style='margin: 0; margin-left: 100px;'>Hydrogen Bond Acceptors: <b>{Descriptors.NumHAcceptors(molecule_benzene)}</b></p>"
+def test_functional_groups(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    visualizer.functional_groups_checkbox.value = True
+    visualizer.update_display()
+    assert visualizer.functional_group_checkboxes != {}
 
-def test_hydrogen_bond_donors(molecule_benzene):
-    hbd = HydrogenBondDonors(molecule_benzene)
-    assert hbd.property_value == Descriptors.NumHDonors(molecule_benzene)
-    assert repr(hbd) == f"<p style='margin: 0; margin-left: 100px;'>Hydrogen Bond Donors: <b>{Descriptors.NumHDonors(molecule_benzene)}</b></p>"
+def test_physiochem_properties(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    visualizer.physiochem_props_checkbox.value = True
+    visualizer.update_display()
+    properties_found = any(
+        isinstance(child, HTML) and "Molecular Weight" in child.value
+        for child in visualizer.output_molecule.children
+    )
+    assert properties_found
 
-def test_mdonatello_imported():
-    """Sample test, will always pass so long as import statement worked"""
-    assert "mdonatello" in sys.modules
-
-def test_mdanalysis_logo_length(mdanalysis_logo_text):
-    """Example test using a fixture defined in conftest.py"""
-    logo_lines = mdanalysis_logo_text.split("\n")
-    assert len(logo_lines) == 46, "Logo file does not have 46 lines!"
-
-class MockAtomGroup:
-    def convert_to(self, format):
-        return mol
-
-@pytest.fixture
-def molecule_visualizer():
-    ag = MockAtomGroup()
-    return MoleculeVisualizer(ag)
-    
-def test_widget_initialization(molecule_visualizer):
-    """Test Ipywidget initialization"""
-    assert isinstance(molecule_visualizer.dropdown, Dropdown)
-    assert isinstance(molecule_visualizer.show_atom_indices_checkbox, Checkbox)
-    assert isinstance(molecule_visualizer.highlight_aromatic_checkbox, Checkbox)
-    assert isinstance(molecule_visualizer.physiochem_props_checkbox, Checkbox)
-    assert isinstance(molecule_visualizer.hbond_props_checkbox, Checkbox)
-    assert isinstance(molecule_visualizer.save_button, Button)
-
-def test_checkbox_interaction(molecule_visualizer):
-    """Test the Ipywidgets checkbox updates after interaction"""
-    assert not molecule_visualizer.show_atom_indices_checkbox.value
-    molecule_visualizer.show_atom_indices_checkbox.value = True
-    assert molecule_visualizer.show_atom_indices_checkbox.value
-
-    assert not molecule_visualizer.highlight_aromatic_checkbox.value
-    molecule_visualizer.highlight_aromatic_checkbox.value = True
-    assert molecule_visualizer.highlight_aromatic_checkbox.value
-
-    assert not molecule_visualizer.physiochem_props_checkbox.value
-    molecule_visualizer.physiochem_props_checkbox.value = True
-    assert molecule_visualizer.physiochem_props_checkbox.value
+def test_hbond_properties(ligand_atoms):
+    visualizer = MoleculeVisualizer(ligand_atoms)
+    visualizer.hbond_props_checkbox.value = True
+    visualizer.update_display()
+    hbond_found = any(
+        isinstance(child, HTML) and "Hydrogen Bond" in child.value
+        for child in visualizer.output_molecule.children
+    )
+    assert hbond_found
