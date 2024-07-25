@@ -1,4 +1,4 @@
-name: CI-CD
+name: Linux_CI_CD
 
 on: [push]
 
