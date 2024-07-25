@@ -1,6 +1,4 @@
 MDonatello
-
-<img src="https://github.com/talagayev/MDonatello/blob/Class_code_movement/docs/source/_static/logo/Mdonatello_logo.png" height="150">
 ==============================
 [//]: # (Badges)
 
@@ -30,15 +28,11 @@ MDonatello is bound by a [Code of Conduct](https://github.com/talagayev/mdonatel
 ### Installation
 
 To build MDonatello from source,
-we highly recommend using virtual environments.
-If possible, we strongly recommend that you use
-[Anaconda](https://docs.conda.io/en/latest/) as your package manager.
-Below we provide instructions both for `conda` and
-for `pip`.
+First clone the repository:
 
-#### With conda
-
-Ensure that you have [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html) installed.
+```
+git clone https://github.com/talagayev/MDonatello
+```
 
 Create a virtual environment and activate it:
 
@@ -47,45 +41,23 @@ conda create --name mdonatello
 conda activate mdonatello
 ```
 
-Install the development and documentation dependencies:
+Then go into the MDonatello folder:
 
 ```
-conda env update --name mdonatello --file devtools/conda-envs/test_env.yaml
-conda env update --name mdonatello --file docs/requirements.yaml
+cd MDonatello
 ```
 
-Build this package from source:
+Finally this package from source:
 
 ```
 pip install -e .
 ```
 
-If you want to update your dependencies (which can be risky!), run:
+#### Running MDonatello
 
-```
-conda update --all
-```
+For the use of MDonatello follow the instructions in this section:
 
-And when you are finished, you can exit the virtual environment with:
-
-```
-conda deactivate
-```
-
-#### With pip
-
-To build the package from source, run:
-
-```
-pip install .
-```
-
-If you want to create a development environment, install
-the dependencies required for tests and docs with:
-
-```
-pip install ".[test,doc]"
-```
+[Running MDonatello](https://mdonatello.readthedocs.io/en/latest/getting_started.html#usage)
 
 ### Copyright
 
