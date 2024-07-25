@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 7.9.0, 8.0.0, 8.1.0, latest]
+        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 8.0.0, 8.1.0, latest]
       max-parallel: 5
 
     steps:
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 7.9.0, 8.0.0, 8.1.0, latest]
+        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 8.0.0, 8.1.0, latest]
       max-parallel: 5
 
     steps:
@@ -114,7 +114,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 7.9.0, 8.0.0, 8.1.0, latest]
+        ipywidgets-version: [7.6.4, 7.7.0, 7.8.0, 8.0.0, 8.1.0, latest]
       max-parallel: 5
 
     steps:
