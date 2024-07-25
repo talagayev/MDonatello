@@ -10,12 +10,27 @@ from ipywidgets import (
     HBox,
 )
 from rdkit import Chem, RDConfig
-from rdkit.Chem import Draw, AllChem, Descriptors, ChemicalFeatures
-from rdkit.Chem.Draw import rdMolDraw2D
+from rdkit.Chem import (
+    Draw,
+    AllChem,
+    ChemicalFeatures,
+)
 from IPython.display import display, clear_output
 from io import BytesIO
 import base64
 import os
+from functools import cached_property
+from mdonatello.mapper import FunctionalGroupHandler
+from mdonatello.drawer import MoleculeDrawer
+from mdonatello.properties import (
+    MolecularWeight,
+    LogP,
+    TPSA,
+    RotatableBonds,
+    HydrogenBondAcceptors,
+    HydrogenBondDonors,
+    Stereocenters,
+)
 
 
 class MoleculeVisualizer:
@@ -28,36 +43,71 @@ class MoleculeVisualizer:
     show_atom_indices : bool, optional
         Whether to display atom indices of the molecule. Default is False.
     width : int, optional
-        The width of the image in pixels. Default is 300.
+        The width of the image in pixels. Default is -1.
     height : int, optional
-        The height of the image in pixels. Default is 300. 
-        
+        The height of the image in pixels. Default is -1.
+
     """
-   
-    def __init__(self, ag: mda.core.groups.AtomGroup, show_atom_indices: bool = False, width: int = -1, height: int = -1):
+
+    def __init__(
+        self,
+        ag: mda.core.groups.AtomGroup,
+        show_atom_indices: bool = False,
+        width: int = -1,
+        height: int = -1,
+    ):
+        """
+        Initializes the MoleculeVisualizer with an AtomGroup and visualization options.
+        """
+        self.width = width
+        self.height = height
+        self.show_atom_indices = show_atom_indices
+
         self.mol: Chem.Mol = ag.convert_to("RDKit")
         self.mol_noh: Chem.Mol = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
 
         # Get individual fragments
         fragments: list[Chem.Mol] = Chem.GetMolFrags(self.mol_noh, asMols=True)
-        self.molecule_list: list[str] = [Chem.MolToSmiles(frag) for frag in fragments]
+        self.molecule_list: list[str] = [
+            Chem.MolToSmiles(frag) for frag in fragments
+        ]
         self.fragments: dict[str, Chem.Mol] = {
             smiles: frag for smiles, frag in zip(self.molecule_list, fragments)
         }
 
-        # Add height and width
-        self.width: int = width
-        self.height: int = height
-        
-        # Create the dropdown and other widgets
+        self.fdefName = os.path.join(RDConfig.RDDataDir, "BaseFeatures.fdef")
+        self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
+
+        self.initialize_widgets()
+        self.initialize_output()
+        self.link_widget_callbacks()
+
+        self.update_display()
+
+    def initialize_widgets(self):
+        """
+        Initializes the interactive widgets for molecule visualization.
+        """
         self.dropdown = Dropdown(
             options=self.molecule_list,
             description="Select molecule:",
-            layout=Layout(width="50%")
+            layout=Layout(width="50%"),
         )
         self.show_atom_indices_checkbox = Checkbox(
-            value=show_atom_indices, description="Show atom indices"
+            value=self.show_atom_indices, description="Show atom indices"
+        )
+        self.partial_charges_checkbox = Checkbox(
+            value=False, description="Show partial charges"
+        )
+        self.partial_charges_heatmap_checkbox = Checkbox(
+            value=False, description="Show partial charge heatmap"
+        )
+        self.stereocenters_checkbox = Checkbox(
+            value=False, description="Show Stereocenters"
+        )
+        self.murcko_scaffold_checkbox = Checkbox(
+            value=False, description="Show Murcko Scaffold"
         )
         self.physiochem_props_checkbox = Checkbox(
             value=False, description="Show Physiochemical Properties"
@@ -65,17 +115,14 @@ class MoleculeVisualizer:
         self.hbond_props_checkbox = Checkbox(
             value=False, description="Show H-Bond Donors/Acceptors"
         )
+        self.rotatable_bonds_checkbox = Checkbox(
+            value=False, description="Show Rotatable Bonds"
+        )
         self.functional_groups_checkbox = Checkbox(
             value=False, description="Show Functional Groups"
         )
         self.save_button = Button(description="Save as PNG")
 
-        # Pharmacophore feature detection
-        self.fdefName = os.path.join(RDConfig.RDDataDir, 'BaseFeatures.fdef')
-        self.factory = ChemicalFeatures.BuildFeatureFactory(self.fdefName)
-        self.pharmacophore_checkboxes = {}
-
-        # Define all possible pharmacophore features
         pharmacophore_families = [
             "Donor",
             "Acceptor",
@@ -86,171 +133,140 @@ class MoleculeVisualizer:
             "LumpedHydrophobe",
         ]
 
-        for family in pharmacophore_families:
-            self.pharmacophore_checkboxes[family] = Checkbox(
-                value=False, description=f"Highlight {family}"
-            )
-        
-        # Save button click event
-        self.save_button.on_click(self.save_selected_molecule)
-        
-        # Display widgets
+        self.pharmacophore_checkboxes = {
+            family: Checkbox(value=False, description=f"Highlight {family}")
+            for family in pharmacophore_families
+        }
+
+    def initialize_output(self):
+        """
+        Initializes the output display and arranges the widgets in the interface.
+        """
+        properties_header = HTML("<h3>Properties</h3>")
+        highlighting_header = HTML("<h3>Atom & Bond Highlighting</h3>")
+        pharmacophores_header = HTML("<h3>Pharmacophores</h3>")
+        molecule_header = HTML("<h3>Molecule</h3>")
+
         pharmacophore_checkbox_rows = []
         checkboxes = list(self.pharmacophore_checkboxes.values())
         for i in range(0, len(checkboxes), 4):
-            row = checkboxes[i:i+4]
+            row = checkboxes[i : i + 4]
             pharmacophore_checkbox_rows.append(HBox(row))
-        
-        properties_header = HTML("<h3>Properties</h3>")
-        pharmacophores_header = HTML("<h3>Pharmacophores</h3>")
-        
+
         self.output_dropdown = VBox()
-        self.output_dropdown.children = [
-            HBox([self.dropdown, self.show_atom_indices_checkbox]),
-            properties_header,
-            HBox(
-                [
-                    self.physiochem_props_checkbox,
-                    self.hbond_props_checkbox,
-                    self.functional_groups_checkbox,
-                ]
-            ),
-            pharmacophores_header,
-        ] + pharmacophore_checkbox_rows
-        
+        self.output_dropdown.children = (
+            [
+                HBox([self.dropdown]),
+                properties_header,
+                HBox(
+                    [
+                        self.physiochem_props_checkbox,
+                        self.partial_charges_checkbox,
+                        self.hbond_props_checkbox,
+                        self.show_atom_indices_checkbox,
+                    ]
+                ),
+                highlighting_header,
+                HBox(
+                    [
+                        self.rotatable_bonds_checkbox,
+                        self.partial_charges_heatmap_checkbox,
+                        self.functional_groups_checkbox,
+                        self.stereocenters_checkbox,
+                    ]
+                ),
+                HBox(
+                    [
+                        self.murcko_scaffold_checkbox,
+                    ]
+                ),
+                pharmacophores_header,
+            ]
+            + pharmacophore_checkbox_rows
+            + [molecule_header]
+        )
+
         self.output_molecule = VBox()
         self.output = VBox()
         self.output.children = [self.output_molecule, self.save_button]
-        
+
         display(self.output_dropdown, self.output)
-        
-        # Update display when dropdown value changes
-        self.update_display()
-        
-        # Link widgets to display update
+
+    def link_widget_callbacks(self):
+        """
+        Links the interactive widgets to the update_display method to reflect changes.
+        """
         self.dropdown.observe(self.update_display, names="value")
         self.show_atom_indices_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.partial_charges_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.partial_charges_heatmap_checkbox.observe(
+            self.update_display, names="value"
+        )
+        self.stereocenters_checkbox.observe(self.update_display, names="value")
+        self.murcko_scaffold_checkbox.observe(
             self.update_display, names="value"
         )
         self.physiochem_props_checkbox.observe(
             self.update_display, names="value"
         )
         self.hbond_props_checkbox.observe(self.update_display, names="value")
+        self.rotatable_bonds_checkbox.observe(
+            self.update_display, names="value"
+        )
         self.functional_groups_checkbox.observe(
             self.update_display, names="value"
         )
         for checkbox in self.pharmacophore_checkboxes.values():
             checkbox.observe(self.update_display, names="value")
-    
-    def draw_molecule(self, mol, show_atom_indices, width, height):
-        highlights = {"atoms": [], "bonds": []}
-        highlight_colors = {}
+        self.save_button.on_click(self.save_selected_molecule)
 
-        # Update pharmacophore features for the selected molecule
-        feats = self.factory.GetFeaturesForMol(mol)
-
-        # Pharmacophore highlighting
-        for feat in feats:
-            family = feat.GetFamily()
-            if self.pharmacophore_checkboxes[family].value:
-                atom_ids = feat.GetAtomIds()
-                highlights["atoms"].extend(atom_ids)
-                color = self.get_color_for_pharmacophore(family)
-                for atom_id in atom_ids:
-                    highlight_colors[atom_id] = color
-
-        # Specific highlighting for Aromatic pharmacophore
-        if self.pharmacophore_checkboxes["Aromatic"].value:
-            hit_ats = [
-                atom.GetIdx() for atom in mol.GetAtoms() if atom.GetIsAromatic()
-            ]
-            hit_bonds = [
-                bond.GetIdx()
-                for bond in mol.GetBonds()
-                if bond.GetBeginAtom().GetIsAromatic()
-                and bond.GetEndAtom().GetIsAromatic()
-            ]
-            highlights["atoms"].extend(hit_ats)
-            highlights["bonds"].extend(hit_bonds)
-            color = self.get_color_for_pharmacophore("Aromatic")
-            for atom_id in hit_ats:
-                highlight_colors[atom_id] = color
-            for bond_id in hit_bonds:
-                highlight_colors[bond_id] = color
-
-        # Functional group highlighting
-        if self.functional_groups_checkbox.value:
-            fg_counts = self.calculate_functional_groups(mol)
-            for fg, atom_indices in fg_counts.items():
-                fg_checkbox_name = f"fg_checkbox_{fg}"
-                if (
-                    hasattr(self, fg_checkbox_name)
-                    and getattr(self, fg_checkbox_name).value
-                ):
-                    highlights["atoms"].extend(atom_indices)
-                    color = self.get_color_for_functional_group(fg)
-                    for atom_id in atom_indices:
-                        highlight_colors[atom_id] = color
-                    # Highlight bonds between functional group atoms
-                    for bond in mol.GetBonds():
-                        if (
-                            bond.GetBeginAtomIdx() in atom_indices
-                            and bond.GetEndAtomIdx() in atom_indices
-                        ):
-                            highlights["bonds"].append(bond.GetIdx())
-                            highlight_colors[bond.GetIdx()] = color
-        
-        d = rdMolDraw2D.MolDraw2DSVG(width, height)
-        d.drawOptions().addAtomIndices = show_atom_indices
-        d.drawOptions().addStereoAnnotation = True
-        rdMolDraw2D.PrepareAndDrawMolecule(
-            d,
-            mol,
-            highlightAtoms=highlights["atoms"],
-            highlightBonds=highlights["bonds"],
-            highlightAtomColors=highlight_colors,
-            highlightBondColors=highlight_colors,
-        )
-        d.FinishDrawing()
-        svg = d.GetDrawingText()
-        return svg
-        
-    def get_color_for_pharmacophore(self, family):
-        color_map = {
-            "Donor": (0.0, 1.0, 0.0),  # Green
-            "Acceptor": (1.0, 0.7, 0.7),  # Rosa
-            "Hydrophobe": (1.0, 1.0, 0.0),  # Yellow
-            "PosIonizable": (0.0, 1.0, 1.0),  # Turquoise
-            "NegIonizable": (1.0, 0.0, 1.0),  # Pink
-            "Aromatic": (0.5, 0.5, 1.0),  # Light Blue
-            "LumpedHydrophobe": (1.0, 0.5, 0.0),  # Orange
-        }
-        return color_map.get(
-            family, (0.5, 0.5, 0.5)
-        )  # Default to grey if not specified
-
-    def get_color_for_functional_group(self, fg):
-        parts = fg.split('(')
-        smarts_part = parts[1]
-        if "P" in smarts_part:
-            return (1.0, 0.5, 0.0)  # Orange for phosphore containing groups
-        elif "S" in smarts_part:
-            return (1.0, 1.0, 0.0)  # Yellow for sulfure containing groups
-        elif "N" in smarts_part:
-            return (0.5, 0.5, 1.0)  # Light blue for nitrogen containing groups
-        elif "O" in smarts_part:
-            return (1.0, 0.7, 0.7)  # Red for oxygen containing groups
-        else:
-            return (1.0, 0.5, 0.0)  # Pink if no specific color assigned
-    
     def update_display(self, _=None):
+        """
+        Updates the molecule display based on the current selections.
+
+        Parameters
+        ----------
+        _ : any, optional
+            A placeholder parameter for widget callback compatibility.
+        """
         smiles = self.dropdown.value
-        mol = self.fragments[smiles]
+        self.current_mol = self.fragments[smiles]
+
+        # Update functional group checkboxes dynamically
+        fg_counts = FunctionalGroupHandler.calculate_functional_groups(
+            self.current_mol
+        )
+        self.functional_group_checkboxes = {}
+        for fg, atom_indices in fg_counts.items():
+            if atom_indices:
+                fg_checkbox_name = f"fg_checkbox_{fg}"
+                if not hasattr(self, fg_checkbox_name):
+                    checkbox = Checkbox(value=False, description=fg)
+                    setattr(self, fg_checkbox_name, checkbox)
+                    checkbox.observe(self.update_display, names="value")
+                self.functional_group_checkboxes[fg] = getattr(
+                    self, fg_checkbox_name
+                )
+
+        drawer = MoleculeDrawer(
+            molecule=self.current_mol,
+            pharmacophore_checkboxes=self.pharmacophore_checkboxes,
+            functional_groups_checkboxes=self.functional_group_checkboxes,
+            rotatable_bonds_checkbox=self.rotatable_bonds_checkbox,
+            partial_charges_checkbox=self.partial_charges_checkbox,
+            partial_charges_heatmap_checkbox=self.partial_charges_heatmap_checkbox,
+            stereocenters_checkbox=self.stereocenters_checkbox,
+            murcko_scaffold_checkbox=self.murcko_scaffold_checkbox,
+            factory=self.factory,
+        )
 
         children = [
             HTML(
-                self.draw_molecule(
-                    mol,
+                drawer.draw_molecule(
                     self.show_atom_indices_checkbox.value,
                     self.width,
                     self.height,
@@ -258,131 +274,48 @@ class MoleculeVisualizer:
             ),
             HTML(f"<h3 style='margin: 0;'>SMILES: {smiles}</h3>"),
         ]
-        
-        if self.physiochem_props_checkbox.value:
-            children.extend(
-                [
-                    self.display_molecular_weight(mol),
-                    self.display_logp(mol),
-                    self.display_tpsa(mol),
-                    self.display_rotatable_bonds(mol),
-                ]
-            )
-            
-        if self.hbond_props_checkbox.value:
-            children.extend(
-                [
-                    self.display_num_h_donors(mol),
-                    self.display_num_h_acceptors(mol),
-                ]
-            )
 
+        if self.physiochem_props_checkbox.value:
+            physiochem_properties = [
+                MolecularWeight(self.current_mol),
+                LogP(self.current_mol),
+                TPSA(self.current_mol),
+                RotatableBonds(self.current_mol),
+                Stereocenters(self.current_mol),
+            ]
+            physiochem_html = [
+                HTML(str(prop)) for prop in physiochem_properties
+            ]
+            children.extend(physiochem_html)
+
+        if self.hbond_props_checkbox.value:
+            hbond_properties = [
+                HydrogenBondAcceptors(self.current_mol),
+                HydrogenBondDonors(self.current_mol),
+            ]
+            hbond_html = [HTML(str(prop)) for prop in hbond_properties]
+            children.extend(hbond_html)
+
+        # Show or hide functional group checkboxes based on the main functional groups checkbox
         if self.functional_groups_checkbox.value:
             functional_groups_header = HTML("<h3>Functional Groups</h3>")
-            fg_counts = self.calculate_functional_groups(mol)
-            fg_checkboxes = []
-            for fg, atom_indices in fg_counts.items():
-                if atom_indices:
-                    fg_checkbox_name = f"fg_checkbox_{fg}"
-                    if not hasattr(self, fg_checkbox_name):
-                        checkbox = Checkbox(value=False, description=fg)
-                        setattr(self, fg_checkbox_name, checkbox)
-                        checkbox.observe(self.update_display, names="value")
-                    fg_checkboxes.append(getattr(self, fg_checkbox_name))
-            
+            fg_checkboxes = list(self.functional_group_checkboxes.values())
             if fg_checkboxes:
                 fg_hbox = HBox(fg_checkboxes)
                 children.append(functional_groups_header)
                 children.append(fg_hbox)
-        
+
         self.output_molecule.children = children
-        
-    def display_molecular_weight(self, mol):
-        mw = Descriptors.MolWt(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Molecular Weight: {mw:.2f} g/mol</p>"
-        )
-        
-    def display_logp(self, mol):
-        logp = Descriptors.MolLogP(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>LogP: {logp:.2f}</p>"
-        )
 
-    def display_num_h_donors(self, mol):
-        num_h_donors = Descriptors.NumHDonors(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Donors: {num_h_donors}</p>"
-        )
-
-    def display_num_h_acceptors(self, mol):
-        num_h_acceptors = Descriptors.NumHAcceptors(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of H-Bond Acceptors: {num_h_acceptors}</p>"
-        )
-
-    def display_tpsa(self, mol):
-        tpsa = Descriptors.TPSA(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Topological Polar Surface Area (TPSA): {tpsa:.2f} Å²</p>"
-        )
-
-    def display_rotatable_bonds(self, mol):
-        rotatable_bonds = Descriptors.NumRotatableBonds(mol)
-        return HTML(
-            f"<p style='margin: 0; margin-left: 100px;'>Number of Rotatable Bonds: {rotatable_bonds}</p>"
-        )
- 
-    def calculate_functional_groups(self, mol):
-        functional_groups = {
-            'Hydroxyl group (-OH)': '[OX2H]',
-            'Primary amine (-NH2)': '[NX3H2]',
-            'Primary ammonium (-NH3+)': '[+NX4;H3]',
-            'Secondary amine (-NH-)': '[NX3H][#6]',
-            'Tertiary amine (-N<)': '[NX3;H0]([#6])[#6]',
-            'Carboxyl group (-COOH)': 'C(=O)[OX2H1]',
-            'Ester (-COOR)': 'C(=O)[OX2H0][#6]',
-            'Amide (-CON-)': 'C(=O)[NX3]',
-            'Aldehyde (-CHO)': '[CX3H1](=O)[#6]',
-            'Ketone (C=O)': '[CX3](=O)[#6]',
-            'Ether (R-O-R)': '[#6][OX2][#6]',
-            'Thiocarbonyl group (C=S)': 'C(=S)',
-            'Imine group (-C=N-)': '[CX3](=N)',
-            'Hydroxylamine group (-N(OH))': '[NX3][OX2H]',
-            'Thiol group (-SH)': '[SX2H]',
-            'Azide group (-N3)': 'N=[NX1]=[NX1]',
-            'Furan ring': 'c1occc1',
-            'Guanidine group (-C(=NH)(N)(NH2))': 'C(=N)(N)[NH2]',
-            'Isothiocyanate (-N=C=S)': '[NX2]=C=[SX2]',
-            'Isocyanate (-N=C=O)': '[NX2]=C=[OX1]',
-            'Lactone (C=O-O)': '[CX3](=O)[OX2][CX3](=O)',
-            'Lactam (C=O-N)': '[CX3](=O)[NX3][CX3](=O)',
-            'Methoxy group (-OCH3)': '[OX2][CH3]',
-            'Nitro group (-NO2)': '[NX3](=O)=O',
-            'Nitroso group (-NO)': '[NX2]=O',
-            'Oxazole ring': 'c1noccc1',
-            'Oxime group (-C=N-OH)': '[CX3](=N[OX2H])',
-            'Epoxide': 'C1CO1',
-            'Nitrile': 'C#N',
-            'Sulfone': 'S(=O)(=O)([#6])([#6])',
-            'Sulfonamide': 'S(=O)(=O)([#6])N',
-            'Sulfide': '[SX2]',
-            'Urea': 'C(=O)(N)(N)',
-            'Phosphoric Ester': 'P(=O)(O)([OX2H0;R1])',
-            'Phosphoric Acid': 'P(=O)(O)(O)'
-        }
-        
-        fg_counts = {}
-        for fg, smarts in functional_groups.items():
-            substruct_matches = mol.GetSubstructMatches(
-                Chem.MolFromSmarts(smarts)
-            )
-            fg_counts[fg] = [
-                atom_idx for match in substruct_matches for atom_idx in match
-            ]
-        return fg_counts
-    
     def save_selected_molecule(self, _):
+        """
+        Saves the currently selected molecule as a PNG file.
+
+        Parameters
+        ----------
+        _ : any, optional
+            A placeholder parameter for button callback compatibility.
+        """
         smiles = self.dropdown.value
         mol = self.fragments[smiles]
         filename = f"{smiles}.png"
