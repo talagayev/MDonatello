@@ -38,6 +38,24 @@ To use the ``mdonatello`` package you need to run a jupyter notebook, thus run t
 
 Now that you started a jupyter notebook create a notebook file and enter the following command to use ``mdonatello``:
 
-.. code-block:: bash
+.. code-block:: text
 
-    jupyter notebook
+    import MDAnalysis as mda
+    import mdonatello
+    from mdonatello import MoleculeVisualizer 
+
+    u = mda.Universe("input.pdb")
+    ag = u.select_atoms("resname UNK")
+    visualizer = MoleculeVisualizer(ag, show_atom_indices=False, width=-1, height=-1)
+
+Some Modifications may be required to obtain the visualization of your ligand:
+
+1. Adjust the code to use your PDB File instead of **input.pdb**.
+
+2. Select the ligand that you want to view by adjusting the name **resname UNK** to the resname of your ligand
+
+Here is an example how the visualization should look like:
+
+.. figure:: /_static/display_example.png
+    :figwidth: 700px
+    :align: center
