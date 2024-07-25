@@ -3,7 +3,7 @@ name: CI-CD
 on: [push]
 
 jobs:
-  build-linux-python-3.10:
+  build_linux_python_3_10:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -53,7 +53,7 @@ jobs:
           pip install pytest pytest-cov
           pytest -vv --cov=openmmdl --cov-report=xml --cov-report=html --color=yes openmmdl/tests/
 
-  build-linux-python-3.11:
+  build_linux_python_3_11:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -103,7 +103,7 @@ jobs:
           pip install pytest pytest-cov
           pytest -vv --cov=openmmdl --cov-report=xml --cov-report=html --color=yes openmmdl/tests/
 
-  build-linux-python-3.12:
+  build_linux_python_3_12:
     runs-on: ubuntu-latest
     strategy:
       matrix:
