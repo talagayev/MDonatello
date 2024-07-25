@@ -1,4 +1,6 @@
 MDonatello
+
+<img src="https://github.com/talagayev/MDonatello/blob/Class_code_movement/docs/source/_static/logo/Mdonatello_logo.png" height="150">
 ==============================
 [//]: # (Badges)
 
