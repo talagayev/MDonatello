@@ -26,7 +26,6 @@ jobs:
       - name: Install dependencies
         run: |
           conda install -y python=3.10
-          conda env update --name base 
 
       - name: Install ipywidgets
         run: |
@@ -76,7 +75,6 @@ jobs:
       - name: Install dependencies
         run: |
           conda install -y python=3.11
-          conda env update --name base 
 
       - name: Install ipywidgets
         run: |
@@ -126,7 +124,6 @@ jobs:
       - name: Install dependencies
         run: |
           conda install -y python=3.12
-          conda env update --name base 
 
       - name: Install ipywidgets
         run: |
