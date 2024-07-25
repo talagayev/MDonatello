@@ -6,6 +6,8 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     strategy:
+      matrix:
+        ipywidgets-version: [8.1.0, 8.0.0, latest]
       max-parallel: 5
 
     steps:
@@ -24,6 +26,14 @@ jobs:
       - name: Install dependencies
         run: |
           conda install -y python=3.10
+
+      - name: Install ipywidgets
+        run: |
+          if [ "${{ matrix.ipywidgets-version }}" = "latest" ]; then
+            pip install ipywidgets
+          else
+            pip install ipywidgets==${{ matrix.ipywidgets-version }}
+          fi
 
       - name: Install package and its entry points
         run: |
