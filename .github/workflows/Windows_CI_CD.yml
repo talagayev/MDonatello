@@ -20,12 +20,13 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install ipywidgets
+        shell: bash
         run: |
-          if ($Env:ipywidgets-version -eq "latest") {
+          if [ "${{ matrix.ipywidgets-version }}" = "latest" ]; then
             pip install ipywidgets
-          } else {
-            pip install ipywidgets==$Env:ipywidgets-version
-          }
+          else
+            pip install ipywidgets==${{ matrix.ipywidgets-version }}
+          fi
 
       - name: Install package and its entry points
         run: |
