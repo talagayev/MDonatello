@@ -14,6 +14,13 @@ First clone the repository:
 
     git clone https://github.com/talagayev/MDonatello
 
+Create a virtual environment and activate it:
+
+.. code-block:: bash
+
+    conda create --name mdonatello
+    conda activate mdonatello
+
 Then go into the ``MDonatello`` folder:
 
 .. code-block:: bash
