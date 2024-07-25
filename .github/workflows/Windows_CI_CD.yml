@@ -21,11 +21,11 @@ jobs:
 
       - name: Install ipywidgets
         run: |
-          if [ "${{ matrix.ipywidgets-version }}" = "latest" ]; then
+          if ($Env:ipywidgets-version -eq "latest") {
             pip install ipywidgets
-          else
-            pip install ipywidgets==${{ matrix.ipywidgets-version }}
-          fi
+          } else {
+            pip install ipywidgets==$Env:ipywidgets-version
+          }
 
       - name: Install package and its entry points
         run: |
