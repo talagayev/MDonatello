@@ -44,6 +44,7 @@ class PharmacophoreHighlighter:
         pharmacophore_checkboxes: Dict[str, "Checkbox"],
         factory: ChemicalFeatures.MolChemicalFeatureFactory,
     ):
+     """Initialize the PharmacophoreHighlighter with a molecule, pharmacophore checkboxes, and an RDKit feature factory."""
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
         self.factory = factory
@@ -51,6 +52,16 @@ class PharmacophoreHighlighter:
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determines the atom and bond indices to highlight them based on the selected pharmacophore features.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """  
         mol = self.molecule
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
@@ -115,12 +126,23 @@ class FunctionalGroupHighlighter:
     """
 
     def __init__(self, molecule: Chem.Mol, checkboxes: Dict[str, "Checkbox"]):
+        """Initialize the FunctionalGroupHighlighter with a molecule and functional group checkboxes."""
         self.molecule = molecule
         self.checkboxes = checkboxes
 
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determine the atom and bond indices to highlight based on the selected functional groups.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -171,12 +193,23 @@ class RotatableBondsHighlighter:
     """
 
     def __init__(self, molecule: Chem.Mol, checkbox: Dict[str, "Checkbox"]):
+        """Initialize the RotatableBondsHighlighter with a molecule and a checkbox for rotatable bonds."""
         self.molecule = molecule
         self.checkbox = checkbox
 
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determines the atom and bond indices to highlight them based on the presence of rotatable bonds.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -218,12 +251,23 @@ class PartialChargeHighlighter:
     """
 
     def __init__(self, molecule: Chem.Mol, checkbox: Dict[str, "Checkbox"]):
+        """Initialize the PartialChargeHighlighter with a molecule and a checkbox for partial charges."""
         self.molecule = molecule
         self.checkbox = checkbox
 
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determines the atom and bond indices to highlight them based on the partial charges.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -271,12 +315,23 @@ class StereocenterHighlighter:
     """
 
     def __init__(self, molecule: Chem.Mol, checkbox: Dict[str, "Checkbox"]):
+        """Initialize the StereocenterHighlighter with a molecule and a checkbox for stereocenters."""
         self.molecule = molecule
         self.checkbox = checkbox
 
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determine the atom and bond indices to highlight based on their stereocenter configuration.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -330,12 +385,23 @@ class MurckoScaffoldHighlighter:
     """
 
     def __init__(self, molecule: Chem.Mol, checkbox: Dict[str, "Checkbox"]):
+        """Initialize the MurckoScaffoldHighlighter with a molecule and a checkbox for Murcko scaffolds."""
         self.molecule = molecule
         self.checkbox = checkbox
 
     def determine_highlights(
         self,
     ) -> Tuple[Dict[str, List[int]], Dict[int, str]]:
+        """Determines the atom and bond indices to highlight them based on the presence of Murcko scaffolds.
+
+        Returns:
+        --------
+        highlights : dict
+            A dictionary with keys "atoms" and "bonds", each containing lists of atom indices and bond indices
+            that should be highlighted.
+        highlight_colors : dict
+            A dictionary mapping atom indices and bond indices to their respective highlight colors.
+        """
         highlights = {"atoms": [], "bonds": []}
         highlight_colors = {}
 
@@ -402,6 +468,7 @@ class MoleculeDrawer:
         murcko_scaffold_checkbox: "Checkbox",
         factory: ChemicalFeatures.MolChemicalFeatureFactory,
     ):
+        """Initialize the MoleculeDrawer with a molecule and various highlighting checkboxes and features."""
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
         self.functional_groups_checkboxes = functional_groups_checkboxes
@@ -415,6 +482,22 @@ class MoleculeDrawer:
     def draw_molecule(
         self, show_atom_indices: bool, width: int, height: int
     ) -> str:
+        """Draws the molecule with the highlighted features.
+
+        Parameters:
+        -----------
+        show_atom_indices : bool
+            Whether to show atom indices on the drawn molecule.
+        width : int
+            Width of the drawing canvas.
+        height : int
+            Height of the drawing canvas.
+
+        Returns:
+        --------
+        svg : str
+            An SVG string representing the drawn molecule with highlighted features.
+        """
         highlights: Dict[str, List[int]] = {"atoms": [], "bonds": []}
         highlight_colors: Dict[int, str] = {}
 
