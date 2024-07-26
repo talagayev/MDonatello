@@ -23,6 +23,20 @@ class FunctionalGroupHandler:
 
     @staticmethod
     def calculate_functional_groups(mol):
+        """
+        Identifies, calculates and counts the functional groups present in the given RDKit molecule.
+
+        Parameters:
+        -----------
+        mol : RDKit.Chem.Mol
+            An RDKit molecule object representing the molecule in which functional groups are identified.
+
+        Returns:
+        --------
+        fg_counts : dict
+            A dictionary with functional group names as keys and lists of atom indices as values,
+            representing the atoms involved in each functional group.
+        """
         functional_groups = {
             "Hydroxyl group (-OH)": "[OX2H]",
             "Primary amine (-NH2)": "[NX3H2]",
@@ -73,6 +87,19 @@ class FunctionalGroupHandler:
 
     @staticmethod
     def get_color_for_functional_group(fg):
+        """
+        Determines the color associated with the given functional group based on its chemical structure.
+
+        Parameters:
+        -----------
+        fg : str
+            The functional group for which the color is required.
+
+        Returns:
+        --------
+        color : Tuple[float, float, float]
+            An RGB tuple representing the color assigned to the specified functional group.
+        """
         parts = fg.split("(")
         smarts_part = parts[1]
         if "P" in smarts_part:
@@ -103,6 +130,19 @@ class PharmacophoreColorMapper:
 
     @staticmethod
     def get_color_for_pharmacophore(family: str) -> Tuple[float, float, float]:
+        """
+        Determines the color associated with the given pharmacophore feature family.
+
+        Parameters:
+        -----------
+        family : str
+            The pharmacophore feature family for which the color is required.
+
+        Returns:
+        --------
+        color : Tuple[float, float, float]
+            An RGB tuple representing the color assigned to the specified pharmacophore feature.
+        """
         color_map = {
             "Donor": (0.0, 1.0, 0.0),  # Green
             "Acceptor": (1.0, 0.7, 0.7),  # Rosa
