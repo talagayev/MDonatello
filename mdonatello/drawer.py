@@ -45,6 +45,7 @@ class PharmacophoreHighlighter:
         factory: ChemicalFeatures.MolChemicalFeatureFactory,
     ):
      """Initialize the PharmacophoreHighlighter with a molecule, pharmacophore checkboxes, and an RDKit feature factory."""
+        
         self.molecule = molecule
         self.pharmacophore_checkboxes = pharmacophore_checkboxes
         self.factory = factory
