@@ -18,6 +18,7 @@ from rdkit.Chem import (
 from IPython.display import display, clear_output
 from io import BytesIO
 import base64
+import logging
 import os
 from functools import cached_property
 from mdonatello.mapper import FunctionalGroupHandler
