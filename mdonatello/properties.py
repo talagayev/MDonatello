@@ -27,13 +27,37 @@ class Property:
     values_format: bool = True
 
     def __init__(self, mol: Chem.Mol):
+        """
+        Initializes the Property class with a molecule.
+
+        Parameters:
+        -----------
+        mol : Chem.Mol
+            The RDKit Mol object of the molecule.
+        """
         self.mol = mol
 
     @cached_property
     def property_value(self) -> Union[float, str]:
+        """
+        Abstract method to be implemented by subclasses to calculate the property value.
+
+        Returns:
+        --------
+        Union[float, str]
+            The calculated property value.
+        """
         raise NotImplementedError("Subclasses should implement this.")
 
     def __repr__(self) -> str:
+        """
+        Returns the HTML-formatted string representation of the property name and value.
+
+        Returns:
+        --------
+        repr_str : str
+            HTML-formatted string representation of the property name and value.
+        """
         value = (
             f"{self.property_value:.2f}"
             if self.values_format
@@ -62,6 +86,14 @@ class MolecularWeight(Property):
 
     @cached_property
     def property_value(self) -> float:
+        """
+        Calculates the molecular weight of the molecule.
+
+        Returns:
+        --------
+        float
+            The molecular weight of the molecule.
+        """
         return Descriptors.MolWt(self.mol)
 
 
@@ -84,6 +116,14 @@ class LogP(Property):
 
     @cached_property
     def property_value(self) -> float:
+        """
+        Calculates the LogP value of the molecule.
+
+        Returns:
+        --------
+        float
+            The LogP value of the molecule.
+        """
         return Descriptors.MolLogP(self.mol)
 
 
@@ -106,6 +146,14 @@ class TPSA(Property):
 
     @cached_property
     def property_value(self):
+        """
+        Calculates the TPSA (Topological Polar Surface Area) value of the molecule.
+
+        Returns:
+        --------
+        float
+            The TPSA value of the molecule.
+        """
         return Descriptors.TPSA(self.mol)
 
 
@@ -128,6 +176,14 @@ class RotatableBonds(Property):
 
     @cached_property
     def property_value(self) -> float:
+        """
+        Calculates the number of rotatable bonds of the molecule.
+
+        Returns:
+        --------
+        float
+            The number of rotatable bonds of the molecule.
+        """
         return Descriptors.NumRotatableBonds(self.mol)
 
 
@@ -150,6 +206,14 @@ class HydrogenBondAcceptors(Property):
 
     @cached_property
     def property_value(self) -> float:
+        """
+        Calculates the number of hydrogen bond acceptors of the molecule.
+
+        Returns:
+        --------
+        float
+            The number of hydrogen bond acceptors of the molecule.
+        """
         return Lipinski.NumHAcceptors(self.mol)
 
 
@@ -172,6 +236,14 @@ class HydrogenBondDonors(Property):
 
     @cached_property
     def property_value(self) -> float:
+        """
+        Calculates the number of hydrogen bond donors of the molecule.
+
+        Returns:
+        --------
+        float
+            The number of hydrogen bond donors of the molecule.
+        """
         return Lipinski.NumHDonors(self.mol)
 
 
@@ -194,5 +266,12 @@ class Stereocenters(Property):
 
     @cached_property
     def property_value(self) -> float:
-        # Using the provided mol directly assuming it's an RDKit molecule object
+        """
+        Calculates the number of stereocenters of the molecule.
+
+        Returns:
+        --------
+        float
+            The number of stereocenters of the molecule.
+        """
         return len(Chem.FindMolChiralCenters(self.mol))
