@@ -55,7 +55,23 @@ pip install -e .
 
 #### Running MDonatello
 
-For the use of MDonatello follow the instructions in this section:
+To use the **mdonatello** package you need to run a jupyter notebook, thus run the command:
+
+```
+import MDAnalysis as mda
+import mdonatello
+from mdonatello import MoleculeVisualizer
+
+u = mda.Universe("input.pdb")
+ag = u.select_atoms("resname UNK")
+visualizer = MoleculeVisualizer(ag, show_atom_indices=False, width=-1, height=-1)
+```
+
+For a more detailed use of **MDonatello** and an example of the output follow the instructions in this section:
+
+```
+jupyter notebook
+```
 
 [Running MDonatello](https://mdonatello.readthedocs.io/en/latest/getting_started.html#usage)
 
