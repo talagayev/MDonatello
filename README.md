@@ -57,6 +57,13 @@ pip install -e .
 
 To use the **mdonatello** package you need to run a jupyter notebook, thus run the command:
 
+
+```
+jupyter notebook
+```
+
+Now that you started a jupyter notebook create a notebook file and enter the following command to use **mdonatello**:
+
 ```
 import MDAnalysis as mda
 import mdonatello
@@ -69,9 +76,6 @@ visualizer = MoleculeVisualizer(ag, show_atom_indices=False, width=-1, height=-1
 
 For a more detailed use of **MDonatello** and an example of the output follow the instructions in this section:
 
-```
-jupyter notebook
-```
 
 [Running MDonatello](https://mdonatello.readthedocs.io/en/latest/getting_started.html#usage)
 
