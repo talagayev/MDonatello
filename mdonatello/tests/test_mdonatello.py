@@ -8,7 +8,7 @@ import os
 @pytest.fixture
 def ligand_atoms():
     """Creates an MDAnalysis AtomGroup for the residue name UNK from input.pdb."""
-    u = mda.Universe("mdonatello/tests/test_files/input.pdb")
+    u = mda.Universe("mdonatello/data/input.pdb")
     ag = u.select_atoms("resname UNK")
     return ag
 
