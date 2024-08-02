@@ -29,6 +29,9 @@ This Repository is part of the Google Summer of Code 2024 for the following proj
 The following Release is the submission for the GSoC 2024 Evaluation:
 [GSoC 2024: 2D visualization for small molecules Release](https://github.com/talagayev/MDonatello/releases/tag/0.0.1)
 
+Here is the final report for the GSoC2024 Project:
+[GSoC 2024 - 2D visualization for small molecules](https://talagayev.github.io/posts/2024/08/1/)
+
 MDonatello is bound by a [Code of Conduct](https://github.com/talagayev/mdonatello/blob/main/CODE_OF_CONDUCT.md).
 
 ### Installation
