@@ -16,7 +16,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath("../.."))
-import mdonatello  # noqa
 
 
 
@@ -112,9 +111,7 @@ html_theme_options = {
 
 }
 # Set your logo and favicon here -- replace the placeholders!
-html_logo = "_static/logo/placeholder_logo.png"
-html_favicon = "_static/logo/placeholder_favicon.svg"
-
+html_logo = "_static/logo/Mdonatello_logo.png"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

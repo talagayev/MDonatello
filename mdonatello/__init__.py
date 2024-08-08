@@ -5,5 +5,6 @@ MDonatello
 
 # Add imports here
 from importlib.metadata import version
+from .mdonatello import MoleculeVisualizer, MolecularWeight, LogP, TPSA, RotatableBonds, HydrogenBondAcceptors, HydrogenBondDonors
 
 __version__ = version("mdonatello")
