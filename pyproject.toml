@@ -24,9 +24,6 @@ dependencies = [
 keywords = [
     "molecular simulations",
 ]
-dynamic = [
-    "version",
-]
 
 [project.optional-dependencies]
 test = [
