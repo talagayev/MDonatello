@@ -1,9 +1,8 @@
 name: Upload MDonatello Package to PyPI
 
 on:
-  push:
-    branches:
-      - main  # or any other branch you want to trigger on
+  release:
+    types: [published]
 
 jobs:
   pypi-publish:
