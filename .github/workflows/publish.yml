@@ -1,7 +1,7 @@
 name: Upload MDonatello Package to PyPI
 
 on:
-  release:
+  push:
     types: [push]
 
 jobs:
