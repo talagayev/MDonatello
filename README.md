@@ -6,17 +6,22 @@ MDonatello
 | :----------------- | :------- |
 | **Workflows**      | ![Linux_CI_CD](https://github.com/talagayev/MDonatello/actions/workflows/Linux_CI_CD.yml/badge.svg) ![MacOS_CI_CD](https://github.com/talagayev/MDonatello/actions/workflows/MacOS_CI_CD.yml/badge.svg) ![Windows_CI_CD](https://github.com/talagayev/MDonatello/actions/workflows/Windows_CI_CD.yml/badge.svg)|
 | **Status**         | [![codecov][badge_codecov]][url_codecov] [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)|
+| **Availability**         | [![PyPi][badge_pypi]][url_pypi] [![Condaforge][badge_conda_forge]][url_conda_forge]|
 | **Community**      | [![License: GPL v2][badge_license]][url_license]  [![Powered by MDAnalysis][badge_mda]][url_mda]|
 
 [badge_actions]: https://github.com/talagayev/mdonatello/actions/workflows/gh-ci.yaml/badge.svg
 [badge_codecov]: https://codecov.io/gh/talagayev/mdonatello/branch/main/graph/badge.svg
 [badge_commits_since]: https://img.shields.io/github/commits-since/talagayev/mdonatello/latest
 [badge_docs]: https://readthedocs.org/projects/mdonatello/badge/?version=latest
+[badge_pypi]: https://img.shields.io/pypi/v/mdonatello.svg
+[badge_conda_forge]: https://img.shields.io/conda/vn/conda-forge/mdonatello.svg
 [badge_license]: https://img.shields.io/badge/License-GPLv2-blue.svg
 [badge_mda]: https://img.shields.io/badge/powered%20by-MDAnalysis-orange.svg?logoWidth=16&logo=data:image/x-icon;base64,AAABAAEAEBAAAAEAIAAoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJD+XwCY/fEAkf3uAJf97wGT/a+HfHaoiIWE7n9/f+6Hh4fvgICAjwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACT/yYAlP//AJ///wCg//8JjvOchXly1oaGhv+Ghob/j4+P/39/f3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAJH8aQCY/8wAkv2kfY+elJ6al/yVlZX7iIiI8H9/f7h/f38UAAAAAAAAAAAAAAAAAAAAAAAAAAB/f38egYF/noqAebF8gYaagnx3oFpUUtZpaWr/WFhY8zo6OmT///8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgICAn46Ojv+Hh4b/jouJ/4iGhfcAAADnAAAA/wAAAP8AAADIAAAAAwCj/zIAnf2VAJD/PAAAAAAAAAAAAAAAAICAgNGHh4f/gICA/4SEhP+Xl5f/AwMD/wAAAP8AAAD/AAAA/wAAAB8Aov9/ALr//wCS/Z0AAAAAAAAAAAAAAACBgYGOjo6O/4mJif+Pj4//iYmJ/wAAAOAAAAD+AAAA/wAAAP8AAABhAP7+FgCi/38Axf4fAAAAAAAAAAAAAAAAiIiID4GBgYKCgoKogoB+fYSEgZhgYGDZXl5e/m9vb/9ISEjpEBAQxw8AAFQAAAAAAAAANQAAADcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAjo6Mb5iYmP+cnJz/jY2N95CQkO4pKSn/AAAA7gAAAP0AAAD7AAAAhgAAAAEAAAAAAAAAAACL/gsAkv2uAJX/QQAAAAB9fX3egoKC/4CAgP+NjY3/c3Nz+wAAAP8AAAD/AAAA/wAAAPUAAAAcAAAAAAAAAAAAnP4NAJL9rgCR/0YAAAAAfX19w4ODg/98fHz/i4uL/4qKivwAAAD/AAAA/wAAAP8AAAD1AAAAGwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAALGxsVyqqqr/mpqa/6mpqf9KSUn/AAAA5QAAAPkAAAD5AAAAhQAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADkUFBSuZ2dn/3V1df8uLi7bAAAATgBGfyQAAAA2AAAAMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB0AAADoAAAA/wAAAP8AAAD/AAAAWgC3/2AAnv3eAJ/+dgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA9AAAA/wAAAP8AAAD/AAAA/wAKDzEAnP3WAKn//wCS/OgAf/8MAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIQAAANwAAADtAAAA7QAAAMAAABUMAJn9gwCe/e0Aj/2LAP//AQAAAAAAAAAA
 [badge_release]: https://img.shields.io/github/release-pre/talagayev/mdonatello.svg
 [url_actions]: https://github.com/talagayev/mdonatello/actions?query=branch%3Amain+workflow%3Agh-ci
 [url_codecov]: https://codecov.io/gh/talagayev/mdonatello/branch/main
+[url_pypi]: https://pypi.python.org/pypi/mdonatello
+[url_conda_forge]: https://anaconda.org/conda-forge/mdonatello
 [url_docs]: https://mdonatello.readthedocs.io/en/latest/?badge=latest
 [url_latest_release]: https://github.com/talagayev/mdonatello/releases
 [url_license]: https://www.gnu.org/licenses/gpl-2.0
