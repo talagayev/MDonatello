@@ -22,7 +22,7 @@ dependencies = [
     "MDAnalysis>=2.0.0", "notebook", "ipywidgets", "rdkit"
 ]
 keywords = [
-    "molecular simulations",
+    "molecular simulations", "visualization", "jupyter notebook", "rdkit", "ipywidgets"
 ]
 
 [project.optional-dependencies]
