@@ -111,7 +111,7 @@ html_theme_options = {
 
 }
 # Set your logo and favicon here -- replace the placeholders!
-html_logo = "_static/logo/Mdonatello_logo.png"
+html_logo = "_static/logo/mdakits-empty-logo-template.svg"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
