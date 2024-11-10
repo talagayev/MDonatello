@@ -287,31 +287,70 @@ class Stereocenters(Property):
 
 
 class HeavyAtoms(Property):
-    """A class for calculating the molecular weight of a molecule.
+    """A class for calculating the amount of heavy atoms of a molecule.
 
     Parameters:
     -----------
     mol : Chem.Mol
-        The RDKit Mol object of the molecule for which the molecular weight is being calculated.
+        The RDKit Mol object of the molecule for which the heavy atom count is being calculated.
 
     Returns:
     --------
     float
-        The molecular weight of the molecule.
+        The heavy atom count of the molecule.
     """
 
     name = "Heavy Atoms"
-    values_format = True
+    values_format = False
     unit = ""
 
     @cached_property
     def property_value(self) -> float:
         """
-        Calculates the molecular weight of the molecule.
+        Calculates the heavy atoms of the molecule.
 
         Returns:
         --------
         float
-            The molecular weight of the molecule.
+            The heavy atom count of the molecule.
         """
         return rdMolDescriptors.CalcNumHeavyAtoms(self.mol)
+
+
+class HeavyAtomsWeight(Property):
+    """A class for calculating the molecular weight of heavy atoms of a molecule.
+
+    Parameters:
+    -----------
+    mol : Chem.Mol
+        The RDKit Mol object of the molecule for which the molecular weight of heavy atoms is being calculated.
+
+    Returns:
+    --------
+    float
+        The molecular weight of heavy atoms of the molecule.
+    """
+
+    name = "Heavy Atom Mass"
+    values_format = True
+    unit = "g/mol"
+
+    @cached_property
+    def property_value(self) -> float:
+        """
+        Calculates the heavy atoms molecular weight of the molecule.
+
+        Returns:
+        --------
+        float
+            The heavy atom molecular weight of the molecule.
+        """
+
+        all_weight = float(Descriptors.MolWt(self.mol))
+        num_all_atoms = rdMolDescriptors.CalcNumAtoms(self.mol)
+        num_heavy_atoms = rdMolDescriptors.CalcNumHeavyAtoms(self.mol)
+        num_hydrogens = num_all_atoms - num_heavy_atoms
+        heavy_atom_weight = all_weight - float(num_hydrogens)
+
+
+        return heavy_atom_weight
