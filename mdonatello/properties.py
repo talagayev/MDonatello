@@ -4,6 +4,7 @@ from rdkit import Chem, RDConfig
 from rdkit.Chem import (
     Descriptors,
     Lipinski,
+    rdMolDescriptors,
 )
 from rdkit.Chem.Lipinski import RotatableBondSmarts
 from mdonatello.mapper import FunctionalGroupHandler
@@ -25,6 +26,7 @@ class Property:
 
     name: str = "property"
     values_format: bool = True
+    unit: str = ""
 
     def __init__(self, mol: Chem.Mol):
         """
@@ -63,7 +65,7 @@ class Property:
             if self.values_format
             else str(self.property_value)
         )
-        repr_str = repr(f"{self.name}: <b>{value}</b>")
+        repr_str = repr(f"{self.name}: <b>{value} {self.unit}</b>")
         return repr_str.replace("'", "")
 
 
@@ -83,6 +85,7 @@ class MolecularWeight(Property):
 
     name = "Molecular Weight"
     values_format = True
+    unit = "g/mol"
 
     @cached_property
     def property_value(self) -> float:
@@ -113,6 +116,7 @@ class LogP(Property):
 
     name = "LogP"
     values_format = True
+    unit = ""
 
     @cached_property
     def property_value(self) -> float:
@@ -143,6 +147,7 @@ class TPSA(Property):
 
     name = "TPSA"
     values_format = True
+    unit = "Å²"
 
     @cached_property
     def property_value(self):
@@ -173,6 +178,7 @@ class RotatableBonds(Property):
 
     name = "Rotatable Bonds"
     values_format = False
+    unit = ""
 
     @cached_property
     def property_value(self) -> float:
@@ -203,6 +209,7 @@ class HydrogenBondAcceptors(Property):
 
     name = "Hydrogen Bond Acceptors"
     values_format = False
+    unit = ""
 
     @cached_property
     def property_value(self) -> float:
@@ -233,6 +240,7 @@ class HydrogenBondDonors(Property):
 
     name = "Hydrogen Bond Donors"
     values_format = False
+    unit = ""
 
     @cached_property
     def property_value(self) -> float:
@@ -263,6 +271,7 @@ class Stereocenters(Property):
 
     name = "Stereocenters"
     values_format = False
+    unit = ""
 
     @cached_property
     def property_value(self) -> float:
@@ -275,3 +284,34 @@ class Stereocenters(Property):
             The number of stereocenters of the molecule.
         """
         return len(Chem.FindMolChiralCenters(self.mol))
+
+
+class HeavyAtoms(Property):
+    """A class for calculating the molecular weight of a molecule.
+
+    Parameters:
+    -----------
+    mol : Chem.Mol
+        The RDKit Mol object of the molecule for which the molecular weight is being calculated.
+
+    Returns:
+    --------
+    float
+        The molecular weight of the molecule.
+    """
+
+    name = "Heavy Atoms"
+    values_format = True
+    unit = ""
+
+    @cached_property
+    def property_value(self) -> float:
+        """
+        Calculates the molecular weight of the molecule.
+
+        Returns:
+        --------
+        float
+            The molecular weight of the molecule.
+        """
+        return rdMolDescriptors.CalcNumHeavyAtoms(self.mol)
