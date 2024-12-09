@@ -286,6 +286,37 @@ class Stereocenters(Property):
         return len(Chem.FindMolChiralCenters(self.mol))
 
 
+class AllAtoms(Property):
+    """A class for calculating the amount of atoms of a molecule.
+
+    Parameters:
+    -----------
+    mol : Chem.Mol
+        The RDKit Mol object of the molecule for which the heavy atom count is being calculated.
+
+    Returns:
+    --------
+    float
+        The atom count of the molecule.
+    """
+
+    name = "Heavy Atoms"
+    values_format = False
+    unit = ""
+
+    @cached_property
+    def property_value(self) -> float:
+        """
+        Calculates the heavy atoms of the molecule.
+
+        Returns:
+        --------
+        float
+            The atom count of the molecule.
+        """
+        return rdMolDescriptors.CalcNumAtoms(self.mol)
+
+
 class HeavyAtoms(Property):
     """A class for calculating the amount of heavy atoms of a molecule.
 
