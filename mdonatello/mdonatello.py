@@ -32,6 +32,7 @@ from mdonatello.properties import (
     HydrogenBondDonors,
     Stereocenters,
     HeavyAtoms,
+    AllAtoms,
     HeavyAtomsWeight,
 )
 
@@ -286,6 +287,7 @@ class MoleculeVisualizer:
                 RotatableBonds(self.current_mol),
                 Stereocenters(self.current_mol),
                 HeavyAtoms(self.current_mol),
+                AllAtoms(self.current_mol),
                 HeavyAtomsWeight(self.current_mol),
             ]
             physiochem_html = [
