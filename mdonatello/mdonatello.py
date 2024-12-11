@@ -33,6 +33,7 @@ from mdonatello.properties import (
     Stereocenters,
     HeavyAtoms,
     AllAtoms,
+    RadiusOfGyration,
     HeavyAtomsWeight,
 )
 
@@ -289,6 +290,7 @@ class MoleculeVisualizer:
                 HeavyAtoms(self.current_mol),
                 AllAtoms(self.current_mol),
                 HeavyAtomsWeight(self.current_mol),
+                RadiusOfGyration(self.current_mol),
             ]
             physiochem_html = [
                 HTML(str(prop)) for prop in physiochem_properties
