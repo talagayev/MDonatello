@@ -348,6 +348,37 @@ class HeavyAtoms(Property):
         return rdMolDescriptors.CalcNumHeavyAtoms(self.mol)
 
 
+class GyrationRadius(Property):
+    """A class for calculating the radius of gyration of a molecule.
+
+    Parameters:
+    -----------
+    mol : Chem.Mol
+        The RDKit Mol object of the molecule for which the heavy atom count is being calculated.
+
+    Returns:
+    --------
+    float
+        The radius of gyration of the molecule.
+    """
+
+    name = "Gyration Radius"
+    values_format = True
+    unit = ""
+
+    @cached_property
+    def property_value(self) -> float:
+        """
+        Calculates the heavy atoms of the molecule.
+
+        Returns:
+        --------
+        float
+            The heavy atom count of the molecule.
+        """
+        return rdMolDescriptors.CalcRadiusOfGyration(self.mol)
+
+
 class HeavyAtomsWeight(Property):
     """A class for calculating the molecular weight of heavy atoms of a molecule.
 
