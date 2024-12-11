@@ -348,7 +348,7 @@ class HeavyAtoms(Property):
         return rdMolDescriptors.CalcNumHeavyAtoms(self.mol)
 
 
-class GyrationRadius(Property):
+class RadiusOfGyration(Property):
     """A class for calculating the radius of gyration of a molecule.
 
     Parameters:
