@@ -292,7 +292,7 @@ class AllAtoms(Property):
     Parameters:
     -----------
     mol : Chem.Mol
-        The RDKit Mol object of the molecule for which the heavy atom count is being calculated.
+        The RDKit Mol object of the molecule for which the atom count is being calculated.
 
     Returns:
     --------
@@ -300,14 +300,14 @@ class AllAtoms(Property):
         The atom count of the molecule.
     """
 
-    name = "Heavy Atoms"
+    name = "All Atoms"
     values_format = False
     unit = ""
 
     @cached_property
     def property_value(self) -> float:
         """
-        Calculates the heavy atoms of the molecule.
+        Calculates the atoms of the molecule.
 
         Returns:
         --------
@@ -354,7 +354,7 @@ class RadiusOfGyration(Property):
     Parameters:
     -----------
     mol : Chem.Mol
-        The RDKit Mol object of the molecule for which the heavy atom count is being calculated.
+        The RDKit Mol object of the molecule for which the radius of gyration is being calculated.
 
     Returns:
     --------
