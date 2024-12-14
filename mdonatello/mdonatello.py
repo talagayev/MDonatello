@@ -56,7 +56,8 @@ class MoleculeVisualizer:
 
     def __init__(
         self,
-        ag: mda.core.groups.AtomGroup,
+        name: str,
+        ag: str = None,
         show_atom_indices: bool = False,
         width: int = -1,
         height: int = -1,
@@ -68,7 +69,15 @@ class MoleculeVisualizer:
         self.height = height
         self.show_atom_indices = show_atom_indices
 
-        self.mol: Chem.Mol = ag.convert_to("RDKit")
+        self.name = name
+        self.ag = ag
+
+        if ".sdf" not in self.name and ".mol2" not in self.name:
+            self.u = mda.Universe(self.name)
+            if self.ag != None:
+                self.ag = u.select_atoms(f"resname {self.ag}")
+            self.mol: Chem.Mol = ag.convert_to("RDKit")
+            
         self.mol_noh: Chem.Mol = Chem.RemoveHs(self.mol)
         AllChem.Compute2DCoords(self.mol_noh)
 
