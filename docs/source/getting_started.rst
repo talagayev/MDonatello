@@ -27,7 +27,8 @@ Then go into the ``MDonatello`` folder:
 
     cd MDonatello
 
-Finally install of the necessary packages with the following command:
+Finally, install the necessary packages with the following command:
+
 
 .. code-block:: bash
 
